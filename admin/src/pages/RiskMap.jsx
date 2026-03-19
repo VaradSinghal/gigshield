@@ -1,15 +1,90 @@
-import React from 'react';
-import { Map as MapIcon, CloudRain, AlertTriangle, Wind, Sun, Layers } from 'lucide-react';
+import React, { useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet.heat';
+import { Layers, CloudRain, Wind, Sun, AlertTriangle } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
-const activeZones = [
-  { id: 'Z-101', name: 'Velachery South', riskLevel: 82, status: 'Critical', activeTriggers: ['Heavy Rainfall', 'Flooding Alert'] },
-  { id: 'Z-102', name: 'T. Nagar Central', riskLevel: 65, status: 'High', activeTriggers: ['Severe AQI'] },
-  { id: 'Z-103', name: 'Adyar North', riskLevel: 45, status: 'Moderate', activeTriggers: ['Heatwave Warning'] },
-  { id: 'Z-104', name: 'Guindy Industrial', riskLevel: 15, status: 'Low', activeTriggers: [] },
-  { id: 'Z-105', name: 'OMR IT Corridor', riskLevel: 94, status: 'Critical', activeTriggers: ['Civic Protest', 'Route Blocks'] },
+const CHENNAI_CENTER = [13.0427, 80.2507];
+
+const HOTSPOTS = [
+  { lat: 13.00, lng: 80.22, intensity: 1.0, count: 600, radius: 0.04, name: 'Velachery South', trigger: 'Flooding Alert' },
+  { lat: 13.09, lng: 80.28, intensity: 0.9, count: 500, radius: 0.03, name: 'North Chennai', trigger: 'Civic Disruption' },
+  { lat: 12.92, lng: 80.23, intensity: 0.8, count: 400, radius: 0.05, name: 'Sholinganallur', trigger: 'Heavy Rainfall' },
+  { lat: 13.05, lng: 80.24, intensity: 0.6, count: 250, radius: 0.02, name: 'T. Nagar Central', trigger: 'Severe AQI' },
 ];
 
+// Helper to generate a normal distribution curve
+const gaussianRandom = () => {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+};
+
+// Custom component to wire leaflet.heat into react-leaflet
+const HeatmapLayer = ({ points }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Mapbox/Google Maps aesthetic colors
+    const heatOptions = {
+      radius: 25,
+      blur: 35,
+      maxZoom: 14,
+      max: 1.0,
+      gradient: {
+        0.2: '#00b894', // Safe Green
+        0.4: '#00cec9', // Cyan
+        0.6: '#fdaa49', // Warning Orange
+        0.8: '#ff6b6b', // Danger Red
+        1.0: '#e84393'  // Critical Pink
+      }
+    };
+
+    const heatLayer = L.heatLayer(points, heatOptions).addTo(map);
+
+    return () => {
+      map.removeLayer(heatLayer);
+    };
+  }, [map, points]);
+
+  return null;
+};
+
 const RiskMap = () => {
+  // Generate random data points clustered around the hotspots for the heat map
+  const heatPoints = useMemo(() => {
+    const points = [];
+    
+    HOTSPOTS.forEach(hs => {
+      for (let i = 0; i < hs.count; i++) {
+        // Generate a point around the hotspot
+        const latOffset = gaussianRandom() * hs.radius * 0.5;
+        const lngOffset = gaussianRandom() * hs.radius * 0.5;
+        
+        // Intensity drops off based on distance from center
+        const distance = Math.sqrt(latOffset * latOffset + lngOffset * lngOffset);
+        const pointIntensity = hs.intensity * Math.exp(-Math.pow(distance / hs.radius, 2));
+
+        points.push([hs.lat + latOffset, hs.lng + lngOffset, pointIntensity]);
+      }
+    });
+
+    // Add some random background noise points across the city
+    for (let i = 0; i < 300; i++) {
+      points.push([
+        CHENNAI_CENTER[0] + (Math.random() - 0.5) * 0.3,
+        CHENNAI_CENTER[1] + (Math.random() - 0.5) * 0.3,
+        Math.random() * 0.3
+      ]);
+    }
+
+    return points;
+  }, []);
+
   return (
     <div>
       <div className="page-title">
@@ -22,64 +97,74 @@ const RiskMap = () => {
 
       <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 180px)' }}>
         {/* Map Area */}
-        <div className="glass-card" style={{ flex: 1, padding: 0, overflow: 'hidden', position: 'relative' }}>
-          {/* Placeholder for Mapbox/Leaflet */}
-          <div style={{ position: 'absolute', inset: 0, background: '#11151c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <MapIcon size={48} color="var(--primary)" style={{ opacity: 0.5, marginBottom: '16px' }} />
-            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Mapbox Integration Layer</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>H3 Hexagonal Grid Rendered Here</div>
+        <div className="glass-card" style={{ flex: 1, padding: 0, overflow: 'hidden', position: 'relative', border: '1px solid var(--border-subtle)' }}>
+          <MapContainer 
+            center={CHENNAI_CENTER} 
+            zoom={12} 
+            style={{ height: '100%', width: '100%', backgroundColor: '#0d1117' }}
+            zoomControl={false}
+          >
+            {/* Ultra-dark voyager map tiles for maximum contrast with heatmap */}
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
+            />
+            {/* Render smoothly blended Heatmap Layer */}
+            <HeatmapLayer points={heatPoints} />
             
-            {/* Fake Heatmap Blob */}
-            <div style={{ position: 'absolute', top: '30%', left: '40%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(232, 67, 147, 0.2) 0%, rgba(255, 107, 107, 0.1) 40%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
-            <div style={{ position: 'absolute', top: '50%', left: '20%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(253, 170, 73, 0.15) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
-          </div>
+            {/* Drop city labels back on top so they aren't obscured by the heat layer */}
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+            />
+          </MapContainer>
           
           {/* Map Controls */}
-          <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 1000 }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
               <Layers size={20} />
             </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
               <CloudRain size={20} />
             </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
               <Wind size={20} />
             </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
               <Sun size={20} />
             </button>
           </div>
         </div>
 
         {/* Sidebar Data */}
-        <div style={{ width: '380px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ width: '380px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
           <div className="glass-card">
-            <div className="card-title">Zone Disruption Alerts</div>
+            <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={20} color="var(--warning)" /> Priority Disruption Alerts
+            </div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              H3 grid segments with active parametric insurance triggers.
+              Continuous risk density monitoring detecting active triggers in major areas.
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {activeZones.map(zone => (
-                <div key={zone.id} style={{ padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', borderLeft: `3px solid ${zone.riskLevel >= 80 ? 'var(--critical)' : zone.riskLevel >= 60 ? 'var(--danger)' : zone.riskLevel >= 40 ? 'var(--warning)' : 'var(--success)'}` }}>
-                  <div className="flex-between" style={{ marginBottom: '8px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px' }}>{zone.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Score: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{zone.riskLevel}</span></div>
+              {HOTSPOTS.map((zone, idx) => {
+                const colors = ['#e84393', '#ff6b6b', '#fdaa49', '#00cec9'];
+                const riskLevel = Math.round(zone.intensity * 100);
+                
+                return (
+                  <div key={idx} style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-subtle)', borderLeft: `4px solid ${colors[idx % colors.length]}` }}>
+                    <div className="flex-between" style={{ marginBottom: '12px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '15px' }}>{zone.name}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Risk Index: <span style={{ color: colors[idx % colors.length], fontWeight: '800', fontSize: '16px' }}>{riskLevel}</span></div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)', padding: '4px 8px', borderRadius: '6px', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <AlertTriangle size={12} /> {zone.trigger}
+                      </span>
+                    </div>
                   </div>
-                  
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {zone.activeTriggers.length === 0 ? (
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Clear conditions</span>
-                    ) : (
-                      zone.activeTriggers.map((t, i) => (
-                        <span key={i} style={{ fontSize: '11px', background: 'var(--bg-dark)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <AlertTriangle size={10} color="var(--warning)" /> {t}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
