@@ -1,4 +1,4 @@
-# GigShield Backend — Team Structure Guide
+# GigKavach Backend — Team Structure Guide
 
 ## Module Ownership
 

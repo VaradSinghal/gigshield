@@ -16,10 +16,10 @@ const Layout = ({ children }) => {
             <div className="sidebar-brand-icon">
               <Shield size={20} />
             </div>
-            GigShield Admin
+            GigKavach Admin
           </div>
         </div>
-        
+
         <nav className="sidebar-nav">
           <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Home size={20} /> Dashboard
@@ -33,9 +33,9 @@ const Layout = ({ children }) => {
           <NavLink to="/fraud" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <AlertCircle size={20} /> Fraud & Appeals
           </NavLink>
-          
+
           <div style={{ margin: '32px 0 16px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px', fontWeight: 700 }}>Management</div>
-          
+
           <a href="#" className="nav-item">
             <Users size={20} /> Policyholders
           </a>
@@ -52,7 +52,7 @@ const Layout = ({ children }) => {
             <Search size={18} color="var(--text-secondary)" />
             <input type="text" placeholder="Search workers, IDs, or claims..." />
           </div>
-          
+
           <div className="header-actions">
             <button className="icon-btn">
               <Bell size={20} />

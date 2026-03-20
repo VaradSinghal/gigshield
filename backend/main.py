@@ -1,1 +1,1 @@
-# GigShield Backend - FastAPI Application Entry Point
+# GigKavach Backend - FastAPI Application Entry Point

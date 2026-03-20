@@ -37,7 +37,7 @@ class ProfileScreen extends StatelessWidget {
               const SectionHeader(title: 'App'),
               _buildMenuItem(Icons.notifications_outlined, 'Notifications', AppColors.warning),
               _buildMenuItem(Icons.help_outline_rounded, 'Help & Support', AppColors.textSecondary),
-              _buildMenuItem(Icons.info_outline_rounded, 'About GigShield', AppColors.textSecondary),
+              _buildMenuItem(Icons.info_outline_rounded, 'About GigKavach', AppColors.textSecondary),
               const SizedBox(height: 20),
               _buildLogoutButton(),
               const SizedBox(height: 100),

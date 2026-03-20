@@ -16,16 +16,16 @@ void main() {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const GigShieldApp());
+  runApp(const GigKavachApp());
 }
 
-class GigShieldApp extends StatelessWidget {
-  const GigShieldApp({super.key});
+class GigKavachApp extends StatelessWidget {
+  const GigKavachApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'GigShield',
+      title: 'GigKavach',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const MainNavigationShell(),

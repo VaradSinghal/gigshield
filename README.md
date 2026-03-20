@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/GigShield-v1.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/GigKavach-v1.0-blue?style=for-the-badge" alt="Version"/>
   <img src="https://img.shields.io/badge/Guidewire-DEVTrails%202026-orange?style=for-the-badge" alt="Hackathon"/>
   <img src="https://img.shields.io/badge/Status-Phase%201-green?style=for-the-badge" alt="Status"/>
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"/>
 </p>
 
-<h1 align="center">GigShield</h1>
+<h1 align="center">GigKavach</h1>
 <h3 align="center">Unified Gig Worker Operating System with AI-Powered Parametric Insurance</h3>
 
 <p align="center">
@@ -15,14 +15,14 @@
 
 ---
 
-> **GigShield is not an insurance application.** It is a financial and operational operating system for gig workers that combines income protection, earnings intelligence, and decision support into a single unified platform. *We protect what workers earn today, and optimize how much they can earn tomorrow.*
+> **GigKavach is not an insurance application.** It is a financial and operational operating system for gig workers that combines income protection, earnings intelligence, and decision support into a single unified platform. *We protect what workers earn today, and optimize how much they can earn tomorrow.*
 
 ---
 
 ## Table of Contents
 
 - [Core Thesis](#core-thesis)
-- [The Problem](#the-problem-why-gigshield-exists)
+- [The Problem](#the-problem-why-GigKavach-exists)
 - [Solution Architecture](#solution-architecture)
 - [Platform Features](#platform-features)
   - [Unified Worker Dashboard](#1-unified-gig-worker-dashboard)
@@ -52,7 +52,7 @@
 
 India's gig economy employs **15M+ platform-based delivery workers**, growing at double-digit rates annually. Yet these workers — the operational backbone of Zomato, Swiggy, and Zepto — have **zero financial safety net**. They earn daily, spend daily, and when disruptions hit, they lose daily with no recovery mechanism.
 
-GigShield addresses **three structural gaps** simultaneously:
+GigKavach addresses **three structural gaps** simultaneously:
 
 | Gap | Solution | Approach |
 |-----|----------|----------|
@@ -68,7 +68,7 @@ GigShield addresses **three structural gaps** simultaneously:
 │      (Zomato, Swiggy, Zepto)                    │
 │  Execution Layer: Orders, Routing, Payments     │
 ├─────────────────────────────────────────────────┤
-│               GIGSHIELD                          │
+│               GigKavach                          │
 │  Worker Layer: Earnings, Risk, Financial Health  │
 │  ➜ Complementary, NOT competitive               │
 └─────────────────────────────────────────────────┘
@@ -76,7 +76,7 @@ GigShield addresses **three structural gaps** simultaneously:
 
 ---
 
-## The Problem: Why GigShield Exists
+## The Problem: Why GigKavach Exists
 
 ### 2.1 Income Instability
 Daily income swings between **₹300 – ₹1,200** based on weather, order volume, time of day, zone assignment, and platform incentive structures. Weekly payout cycles compound the instability.
@@ -100,7 +100,7 @@ Sudden incentive changes, zone reassignments, or algorithm updates can slash ear
 
 ## Solution Architecture
 
-GigShield is a **three-layer operating system**:
+GigKavach is a **three-layer operating system**:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -170,7 +170,7 @@ This is the **daily active usage driver**. An insurance app used only during dis
 **Tech Stack:** Python (scikit-learn/XGBoost) · OpenWeather API · PostgreSQL
 
 **Business Value:**  
-If GigShield increases weekly earnings by even **₹200**, workers will recommend it to peers, stay subscribed, and trust the insurance layer. This is the **#1 acquisition driver**.
+If GigKavach increases weekly earnings by even **₹200**, workers will recommend it to peers, stay subscribed, and trust the insurance layer. This is the **#1 acquisition driver**.
 
 ---
 
@@ -291,7 +291,7 @@ Parametric Engine ──► Claim Event Queue (Celery)
 **Tech Stack:** Celery + Redis broker · Razorpay (test mode) · UPI Sandbox · FCM notifications
 
 **Business Value:**  
-This is GigShield's **strongest differentiator**. Zero friction in claims = trust. Trust is the single most critical asset in insurance.
+This is GigKavach's **strongest differentiator**. Zero friction in claims = trust. Trust is the single most critical asset in insurance.
 
 ---
 
@@ -458,7 +458,7 @@ Interactive map overlay showing real-time disruption risk per micro-zone:
 
 > *A coordinated syndicate of 500 workers using GPS spoofing and encrypted messaging to fake disruption-zone presence has drained a competitor's liquidity pool.*
 
-**Core Principle:** No single data point can be trusted in isolation. GigShield uses **exponentially compounding multi-signal verification**.
+**Core Principle:** No single data point can be trusted in isolation. GigKavach uses **exponentially compounding multi-signal verification**.
 
 ### Three Truth Layers
 
@@ -633,7 +633,7 @@ Weekly Premium Collection
 
 ## AI & Machine Learning Architecture
 
-GigShield relies on an ensemble of specialized machine learning models rather than a single monolithic AI. This architecture ensures high-performance, domain-specific intelligence for earnings predictions, risk assessment, and fraud detection.
+GigKavach relies on an ensemble of specialized machine learning models rather than a single monolithic AI. This architecture ensures high-performance, domain-specific intelligence for earnings predictions, risk assessment, and fraud detection.
 
 ### 1. Data Pipeline & Feature Engineering
 Before training, raw data flows through our preprocessing pipelines (`backend/ai/pipelines/`):
@@ -698,7 +698,7 @@ How the AI operates in real-time production:
 
 ### Why Zomato & Swiggy Would Partner
 
-| Platform Pain Point | How GigShield Helps |
+| Platform Pain Point | How GigKavach Helps |
 |--------------------|-------------------|
 | **Workforce attrition** (largest cost driver) | Income protection + stability tools → workers stay longer |
 | **Supply shortage during rain** (lost revenue) | Insured workers stay online in marginal conditions |
@@ -706,7 +706,7 @@ How the AI operates in real-time production:
 
 ### Conflict Mitigation
 - Work Optimizer operates at **category level** (food vs. grocery), never names specific platforms
-- GigShield cannot suppress orders, change routing, or affect any platform function
+- GigKavach cannot suppress orders, change routing, or affect any platform function
 - Partnership model: platforms subsidize worker premiums as an **employment benefit** (analogous to employer health insurance)
 
 ---
@@ -728,5 +728,5 @@ How the AI operates in real-time production:
 - [Feedback form](https://docs.google.com/forms/d/e/1FAIpQLSdXMbRQRbR0B1quJ1WIeyzQ2f29MloRauZCivZOZtimqRFUQQ/viewform?usp=header)
 
 <p align="center">
-  <strong>GigShield</strong> — <em>We don't ask workers to understand insurance. We ask them to trust that when the rain falls and they cannot work, GigShield has them covered.</em>
+  <strong>GigKavach</strong> — <em>We don't ask workers to understand insurance. We ask them to trust that when the rain falls and they cannot work, GigKavach has them covered.</em>
 </p>
