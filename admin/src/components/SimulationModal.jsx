@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, X, Sliders, Zap, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Play, X, Sliders, Zap, CheckCircle, ShieldAlert, XCircle } from 'lucide-react';
 import { supabase } from '../supabase';
 
 const SimulationModal = ({ onClose, onSimulate }) => {
@@ -105,8 +105,8 @@ const SimulationModal = ({ onClose, onSimulate }) => {
         {/* Header */}
         <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-surface)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ backgroundColor: 'rgba(108, 92, 231, 0.15)', padding: '8px', borderRadius: '8px' }}>
-              <Sliders size={20} color="var(--primary)" />
+            <div style={{ backgroundColor: 'var(--bg-card-light)', padding: '8px', borderRadius: '8px', color: 'var(--primary)' }}>
+              <Sliders size={20} />
             </div>
             <div>
               <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>AI Processing Simulator</div>

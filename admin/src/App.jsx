@@ -13,10 +13,7 @@ const Layout = ({ children }) => {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="sidebar-brand-icon">
-              <Shield size={20} />
-            </div>
-            GigKavach Admin
+            <img src="/logo.svg" alt="GigKavach" style={{ width: '130px', margin: '0 auto' }} />
           </div>
         </div>
 

@@ -101,9 +101,17 @@ const Claims = () => {
     };
   }, []);
 
-  const handleAction = (claimId, action) => {
+  const handleAction = async (claimId, action) => {
     setReviewActions(prev => ({ ...prev, [claimId]: action }));
-    // In production: await supabase.from('claims').update({action}).eq('claim_id', claimId);
+    
+    // Persist to Supabase
+    const status = action === 'approved' ? 'approved' : 'rejected';
+    const { error } = await supabase
+      .from('claims')
+      .update({ status, action: status })
+      .eq('claim_id', claimId);
+    
+    if (error) console.error('Error updating claim:', error);
   };
 
   const getStatusChip = (claim) => {
@@ -124,7 +132,7 @@ const Claims = () => {
         <div className="glass-card stat-card">
           <div className="stat-header">
             <span className="stat-title">Zero-Touch Rate</span>
-            <div className="stat-icon" style={{ background: 'rgba(0, 184, 148, 0.15)', color: 'var(--success)' }}><CheckCircle size={20} /></div>
+            <div className="stat-icon" style={{ background: 'var(--bg-surface)', color: 'var(--success)' }}><CheckCircle size={20} /></div>
           </div>
           <div className="stat-value">85.7%</div>
           <div className="stat-trend trend-up">6 of 7 claims auto-processed</div>
@@ -133,7 +141,7 @@ const Claims = () => {
         <div className="glass-card stat-card">
           <div className="stat-header">
             <span className="stat-title">Loss Ratio</span>
-            <div className="stat-icon" style={{ background: 'rgba(108, 92, 231, 0.15)', color: 'var(--primary)' }}><Shield size={20} /></div>
+            <div className="stat-icon" style={{ background: 'var(--bg-card-light)', color: 'var(--primary)' }}><Shield size={20} /></div>
           </div>
           <div className="stat-value">58.2%</div>
           <div className="stat-trend trend-up" style={{ color: 'var(--success)' }}>Target: 55-65% ✓</div>
@@ -142,7 +150,7 @@ const Claims = () => {
         <div className="glass-card stat-card">
           <div className="stat-header">
             <span className="stat-title">Avg Confidence</span>
-            <div className="stat-icon" style={{ background: 'rgba(253, 170, 73, 0.15)', color: 'var(--warning)' }}><Zap size={20} /></div>
+            <div className="stat-icon" style={{ background: 'rgba(230, 81, 0, 0.1)', color: 'var(--warning)' }}><Zap size={20} /></div>
           </div>
           <div className="stat-value">79.3</div>
           <div className="stat-trend trend-up">ML fraud detection score</div>

@@ -2,16 +2,15 @@ import React, { useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
-import { Layers, CloudRain, Wind, Sun, AlertTriangle } from 'lucide-react';
+import { Layers, CloudRain, Wind, Sun, AlertTriangle, RefreshCw } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { supabase } from '../supabase';
 
 const CHENNAI_CENTER = [13.0427, 80.2507];
 
-const HOTSPOTS = [
-  { lat: 13.00, lng: 80.22, intensity: 1.0, count: 600, radius: 0.04, name: 'Velachery South', trigger: 'Flooding Alert' },
-  { lat: 13.09, lng: 80.28, intensity: 0.9, count: 500, radius: 0.03, name: 'North Chennai', trigger: 'Civic Disruption' },
-  { lat: 12.92, lng: 80.23, intensity: 0.8, count: 400, radius: 0.05, name: 'Sholinganallur', trigger: 'Heavy Rainfall' },
-  { lat: 13.05, lng: 80.24, intensity: 0.6, count: 250, radius: 0.02, name: 'T. Nagar Central', trigger: 'Severe AQI' },
+const DEFAULT_HOTSPOTS = [
+  { lat: 13.00, lng: 80.22, intensity: 0.5, count: 100, radius: 0.04, name: 'Velachery South', trigger: 'Baseline Risk' },
+  { lat: 13.09, lng: 80.28, intensity: 0.4, count: 80, radius: 0.03, name: 'North Chennai', trigger: 'Baseline Risk' },
 ];
 
 // Helper to generate a normal distribution curve
@@ -55,25 +54,46 @@ const HeatmapLayer = ({ points }) => {
 };
 
 const RiskMap = () => {
-  // Generate random data points clustered around the hotspots for the heat map
+  const [activeHotspots, setActiveHotspots] = React.useState(DEFAULT_HOTSPOTS);
+
+  useEffect(() => {
+    const fetchTriggers = async () => {
+      const { data } = await supabase.from('active_triggers').select('*').eq('status', 'active');
+      if (data && data.length > 0) {
+        const mapped = data.map(t => ({
+          lat: CHENNAI_CENTER[0] + (Math.random() - 0.5) * 0.1, // Simulated spread near center for demo if coords not in table
+          lng: CHENNAI_CENTER[1] + (Math.random() - 0.5) * 0.1,
+          intensity: t.risk_level / 10,
+          count: Math.floor(t.risk_level * 100),
+          radius: 0.04,
+          name: t.zone,
+          trigger: t.label
+        }));
+        setActiveHotspots([...DEFAULT_HOTSPOTS, ...mapped]);
+      } else {
+        setActiveHotspots(DEFAULT_HOTSPOTS);
+      }
+    };
+
+    fetchTriggers();
+    const triggerSub = supabase.channel('risk-map').on('postgres_changes', { event: '*', schema: 'public', table: 'active_triggers' }, fetchTriggers).subscribe();
+    return () => supabase.removeChannel(triggerSub);
+  }, []);
+
   const heatPoints = useMemo(() => {
     const points = [];
-    
-    HOTSPOTS.forEach(hs => {
-      for (let i = 0; i < hs.count; i++) {
-        // Generate a point around the hotspot
-        const latOffset = gaussianRandom() * hs.radius * 0.5;
-        const lngOffset = gaussianRandom() * hs.radius * 0.5;
-        
-        // Intensity drops off based on distance from center
+    activeHotspots.forEach(hs => {
+      // Logic for heatmap points generation...
+      const count = hs.count || 100;
+      for (let i = 0; i < count; i++) {
+        const latOffset = gaussianRandom() * (hs.radius || 0.04) * 0.5;
+        const lngOffset = gaussianRandom() * (hs.radius || 0.04) * 0.5;
         const distance = Math.sqrt(latOffset * latOffset + lngOffset * lngOffset);
-        const pointIntensity = hs.intensity * Math.exp(-Math.pow(distance / hs.radius, 2));
-
+        const pointIntensity = (hs.intensity || 0.5) * Math.exp(-Math.pow(distance / (hs.radius || 0.04), 2));
         points.push([hs.lat + latOffset, hs.lng + lngOffset, pointIntensity]);
       }
     });
 
-    // Add some random background noise points across the city
     for (let i = 0; i < 300; i++) {
       points.push([
         CHENNAI_CENTER[0] + (Math.random() - 0.5) * 0.3,
@@ -81,9 +101,8 @@ const RiskMap = () => {
         Math.random() * 0.3
       ]);
     }
-
     return points;
-  }, []);
+  }, [activeHotspots]);
 
   return (
     <div>
@@ -101,12 +120,12 @@ const RiskMap = () => {
           <MapContainer 
             center={CHENNAI_CENTER} 
             zoom={12} 
-            style={{ height: '100%', width: '100%', backgroundColor: '#0d1117' }}
+            style={{ height: '100%', width: '100%', backgroundColor: 'var(--bg-dark)' }}
             zoomControl={false}
           >
             {/* Ultra-dark voyager map tiles for maximum contrast with heatmap */}
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
             />
             {/* Render smoothly blended Heatmap Layer */}
@@ -114,22 +133,22 @@ const RiskMap = () => {
             
             {/* Drop city labels back on top so they aren't obscured by the heat layer */}
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
             />
           </MapContainer>
           
           {/* Map Controls */}
           <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 1000 }}>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
               <Layers size={20} />
             </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
               <CloudRain size={20} />
             </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
               <Wind size={20} />
             </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
               <Sun size={20} />
             </button>
           </div>
@@ -146,9 +165,9 @@ const RiskMap = () => {
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {HOTSPOTS.map((zone, idx) => {
+              {activeHotspots.filter(h => h.trigger !== 'Baseline Risk').map((zone, idx) => {
                 const colors = ['#e84393', '#ff6b6b', '#fdaa49', '#00cec9'];
-                const riskLevel = Math.round(zone.intensity * 100);
+                const riskLevel = Math.round((zone.intensity || 0) * 100);
                 
                 return (
                   <div key={idx} style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-subtle)', borderLeft: `4px solid ${colors[idx % colors.length]}` }}>
@@ -165,6 +184,12 @@ const RiskMap = () => {
                   </div>
                 );
               })}
+              {activeHotspots.filter(h => h.trigger !== 'Baseline Risk').length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                  <Sun size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                  <div style={{ fontSize: '13px' }}>City conditions are stable. No active disruption triggers.</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

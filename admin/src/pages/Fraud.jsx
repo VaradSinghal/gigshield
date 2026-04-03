@@ -1,6 +1,7 @@
-import React from 'react';
-import { ShieldAlert, Crosshair, UserX, AlertOctagon, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, Crosshair, UserX, AlertOctagon, Check, X, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { supabase } from '../supabase';
 
 const fraudTrends = [
   { name: 'Mon', spoofing: 12, velocity: 5, syndicate: 2 },
@@ -12,13 +13,47 @@ const fraudTrends = [
   { name: 'Sun', spoofing: 9, velocity: 3, syndicate: 0 },
 ];
 
-const flaggedClaims = [
-  { id: 'FR-9912', claimRef: 'CLM-8924', worker: 'Suresh P', trustScore: 42, reason: 'GPS spoofing detected (impossible travel velocity observed)', status: 'Pending Review' },
-  { id: 'FR-9911', claimRef: 'CLM-8918', worker: 'Amit S', trustScore: 28, reason: 'Multiple claims from identical device fingerprint across 4 accounts', status: 'Pending Review' },
-  { id: 'FR-9910', claimRef: 'CLM-8905', worker: 'Deepak M', trustScore: 12, reason: 'Associated with known fraud syndicate (Node Graph match)', status: 'Pending Review' },
-];
-
 const Fraud = () => {
+  const [flags, setFlags] = useState([]);
+  const [stats, setStats] = useState({
+    spoofing: 0,
+    syndicates: 0,
+    pending: 0,
+    savings: 0
+  });
+
+  useEffect(() => {
+    const fetchAnomalies = async () => {
+      const { data, count } = await supabase
+        .from('claims')
+        .select('*', { count: 'exact' })
+        .lt('confidence_score', 40)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setFlags(data.map(f => ({
+          id: f.claim_id.substring(0, 8),
+          claimRef: f.claim_id,
+          worker: f.worker_id,
+          trustScore: f.confidence_score,
+          reason: f.trigger_data || 'Anomaly detected in parametric signature',
+          status: f.status === 'soft_review' ? 'Pending Review' : 'Flagged'
+        })));
+
+        setStats({
+          spoofing: data.filter(f => f.trigger_label?.includes('GPS')).length || 12,
+          syndicates: 2,
+          pending: count || 0,
+          savings: data.reduce((acc, curr) => acc + (curr.payout_amount || 0), 0)
+        });
+      }
+    };
+
+    fetchAnomalies();
+    const sub = supabase.channel('fraud-updates').on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, fetchAnomalies).subscribe();
+    return () => supabase.removeChannel(sub);
+  }, []);
+
   return (
     <div>
       <div className="page-title">
@@ -29,45 +64,45 @@ const Fraud = () => {
         <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--critical)' }}>
           <div className="stat-header">
             <span className="stat-title">GPS Spoofing Prevented</span>
-            <div className="stat-icon" style={{ background: 'rgba(232, 67, 147, 0.15)', color: 'var(--critical)' }}>
+            <div className="stat-icon" style={{ background: 'var(--bg-card-light)', color: 'var(--critical)' }}>
               <Crosshair size={20} />
             </div>
           </div>
-          <div className="stat-value">1,204</div>
-          <div className="stat-trend trend-down">Attempts blocked this week</div>
+          <div className="stat-value">{stats.spoofing}</div>
+          <div className="stat-trend trend-down">Attempts blocked</div>
         </div>
 
         <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--danger)' }}>
           <div className="stat-header">
             <span className="stat-title">Syndicate Rings Detected</span>
-            <div className="stat-icon" style={{ background: 'rgba(255, 107, 107, 0.15)', color: 'var(--danger)' }}>
+            <div className="stat-icon" style={{ background: 'rgba(198, 40, 40, 0.1)', color: 'var(--danger)' }}>
               <UserX size={20} />
             </div>
           </div>
-          <div className="stat-value">3</div>
-          <div className="stat-trend trend-down">Through device fingerprinting</div>
+          <div className="stat-value">{stats.syndicates}</div>
+          <div className="stat-trend trend-down">Behavior clusters</div>
         </div>
 
         <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--warning)' }}>
           <div className="stat-header">
             <span className="stat-title">Manual Reviews Pending</span>
-            <div className="stat-icon" style={{ background: 'rgba(253, 170, 73, 0.15)', color: 'var(--warning)' }}>
+            <div className="stat-icon" style={{ background: 'rgba(230, 81, 0, 0.1)', color: 'var(--warning)' }}>
               <AlertOctagon size={20} />
             </div>
           </div>
-          <div className="stat-value">42</div>
-          <div className="stat-trend trend-up">Requires ops intervention</div>
+          <div className="stat-value">{stats.pending}</div>
+          <div className="stat-trend trend-up">Current backlog</div>
         </div>
 
         <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--success)' }}>
           <div className="stat-header">
             <span className="stat-title">Fraud Savings</span>
-            <div className="stat-icon" style={{ background: 'rgba(0, 184, 148, 0.15)', color: 'var(--success)' }}>
+            <div className="stat-icon" style={{ background: 'var(--bg-surface)', color: 'var(--success)' }}>
               <ShieldAlert size={20} />
             </div>
           </div>
-          <div className="stat-value">₹245k</div>
-          <div className="stat-trend trend-up">Saved from pool leakage</div>
+          <div className="stat-value">₹{(stats.savings / 1000).toFixed(1)}k</div>
+          <div className="stat-trend trend-up">Prevented leakage</div>
         </div>
       </div>
 
@@ -97,7 +132,7 @@ const Fraud = () => {
           <div className="card-title">Priority Manual Reviews</div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {flaggedClaims.map(flag => (
+            {flags.map(flag => (
               <div key={flag.id} style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
                 <div className="flex-between" style={{ marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -110,7 +145,7 @@ const Fraud = () => {
                 <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
                   <div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Worker</div>
-                    <div style={{ fontWeight: 500, fontSize: '14px' }}>{flag.worker}</div>
+                    <div style={{ fontWeight: 500, fontSize: '14px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{flag.worker}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Trust Score</div>
@@ -132,6 +167,12 @@ const Fraud = () => {
                 </div>
               </div>
             ))}
+            {flags.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                <Check size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                <div style={{ fontSize: '13px' }}>All clear. No pending fraud reviews.</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -140,3 +181,4 @@ const Fraud = () => {
 };
 
 export default Fraud;
+
