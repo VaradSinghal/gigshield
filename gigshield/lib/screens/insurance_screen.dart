@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../data/mock_data.dart';
 import '../services/supabase_service.dart';
+import '../services/premium_engine.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/simulation_bottom_sheet.dart';
 import 'claim_detail_screen.dart';
 
 class InsuranceScreen extends StatefulWidget {
@@ -20,10 +22,26 @@ class _InsuranceScreenState extends State<InsuranceScreen>
     MockData.activeTriggers,
   );
 
+  // Dynamic Premium State
+  late PremiumResult _premiumResult;
+  bool _isRecalculating = false;
+  String _currentZone = MockData.workerZone;
+  String _currentCity = MockData.workerCity;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
+    // Compute initial dynamic premium
+    _premiumResult = PremiumEngine.calculate(
+      zone: _currentZone,
+      city: _currentCity,
+      vehicleType: MockData.workerVehicle,
+      experienceWeeks: MockData.experienceWeeks,
+      claimCount: MockData.totalClaimsPaid,
+      tier: MockData.policyTier,
+    );
 
     if (SupabaseService.isConfigured) {
       _initSupabaseStreams();
@@ -102,6 +120,22 @@ class _InsuranceScreenState extends State<InsuranceScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgDark,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: const SimulationBottomSheet(),
+            ),
+          );
+        },
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.bug_report, color: Colors.white),
+        label: const Text('Trigger Sandbox', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,16 +570,40 @@ class _InsuranceScreenState extends State<InsuranceScreen>
     );
   }
 
+  // ─── Dynamic Premium Recalculation ─────────────────────────────
+
+  Future<void> _recalculatePremium(String zone) async {
+    setState(() => _isRecalculating = true);
+    await Future.delayed(const Duration(milliseconds: 1200)); // Simulate ML inference
+    if (!mounted) return;
+    setState(() {
+      _currentZone = zone;
+      _premiumResult = PremiumEngine.calculate(
+        zone: zone,
+        city: _currentCity,
+        vehicleType: MockData.workerVehicle,
+        experienceWeeks: MockData.experienceWeeks,
+        claimCount: MockData.totalClaimsPaid,
+        tier: MockData.policyTier,
+      );
+      _isRecalculating = false;
+    });
+  }
+
   // ─── TAB 2: Dynamic Premium ────────────────────────────────────
 
   Widget _buildPremiumTab() {
+    final result = _premiumResult;
+    final zoneProfile = result.zoneProfile;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Premium total
-          Container(
+          // Premium total hero card
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -557,59 +615,126 @@ class _InsuranceScreenState extends State<InsuranceScreen>
             ),
             child: Column(
               children: [
-                const Text(
-                  'Your Weekly Premium',
-                  style: TextStyle(fontSize: 14, color: Colors.white70),
-                ),
+                const Text('Your Weekly Premium', style: TextStyle(fontSize: 14, color: Colors.white70)),
                 const SizedBox(height: 8),
-                const Text(
-                  '\u20B945',
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const Text(
-                  'per week',
-                  style: TextStyle(fontSize: 13, color: Colors.white60),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white70, size: 16),
-                      SizedBox(width: 6),
-                      Text(
-                        'AI-Powered Dynamic Pricing',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w500,
+                _isRecalculating
+                    ? const SizedBox(
+                        height: 50,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)),
+                            SizedBox(height: 6),
+                            Text('AI Recalculating...', style: TextStyle(fontSize: 11, color: Colors.white70)),
+                          ],
                         ),
+                      )
+                    : Text(
+                        '\u20B9${result.totalPremium.toInt()}',
+                        style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: Colors.white),
                       ),
-                    ],
-                  ),
+                const Text('per week', style: TextStyle(fontSize: 13, color: Colors.white60)),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.auto_awesome, color: Colors.white70, size: 14),
+                          const SizedBox(width: 4),
+                          Text('${(result.modelConfidence * 100).toInt()}% confidence', style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.access_time, color: Colors.white70, size: 14),
+                          const SizedBox(width: 4),
+                          Text('${result.coverageHoursPerDay}h/day coverage', style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SectionHeader(title: 'Premium Breakdown'),
-          // Factor-by-factor breakdown
-          ...MockData.premiumFactors.map((factor) {
-            final amount = factor['amount'] as double;
-            final isDiscount = amount < 0;
+          const SizedBox(height: 16),
+
+          // Zone Risk Summary Card
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Zone: $_currentZone', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          Text('Priced using ${result.factors.length} ML risk vectors', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _miniStat('Flood Risk', '${(zoneProfile.floodRiskScore * 100).toInt()}%', zoneProfile.floodRiskScore > 0.5 ? AppColors.danger : AppColors.success),
+                    _miniStat('Rain Forecast', '${zoneProfile.predictedRainNextWeek}mm', zoneProfile.predictedRainNextWeek > 15 ? AppColors.warning : AppColors.success),
+                    _miniStat('AQI', '${zoneProfile.avgAqi}', zoneProfile.avgAqi > 200 ? AppColors.danger : AppColors.textMuted),
+                    _miniStat('Temp', '${zoneProfile.avgTempC}°C', zoneProfile.avgTempC >= 40 ? AppColors.danger : AppColors.textMuted),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Compare with another zone
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showZoneComparisonSheet(),
+              icon: const Icon(Icons.compare_arrows_rounded, size: 18),
+              label: const Text('Compare Premium for Different Zone'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+
+          const SectionHeader(title: 'AI Premium Breakdown'),
+
+          // Factor-by-factor breakdown from live engine
+          ...result.factors.map((factor) {
+            final isDiscount = factor.amount < 0;
+            final isNeutral = factor.amount == 0;
             final color = isDiscount
                 ? AppColors.success
-                : (factor['type'] == 'base'
-                      ? AppColors.textPrimary
-                      : AppColors.warning);
+                : isNeutral
+                    ? AppColors.textMuted
+                    : (factor.type == 'base' ? AppColors.textPrimary : AppColors.warning);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -621,98 +746,59 @@ class _InsuranceScreenState extends State<InsuranceScreen>
                     Row(
                       children: [
                         Icon(
-                          isDiscount
-                              ? Icons.trending_down_rounded
-                              : (factor['type'] == 'base'
-                                    ? Icons.foundation_rounded
-                                    : Icons.add_circle_outline_rounded),
-                          color: color,
-                          size: 18,
+                          isDiscount ? Icons.trending_down_rounded
+                              : isNeutral ? Icons.remove_rounded
+                              : factor.type == 'base' ? Icons.foundation_rounded
+                              : Icons.add_circle_outline_rounded,
+                          color: color, size: 18,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            factor['label'] as String,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: color,
-                            ),
-                          ),
+                          child: Text(factor.label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: color)),
                         ),
                         Text(
-                          '${isDiscount ? "" : "+"}\u20B9${amount.abs().toInt()}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: color,
-                          ),
+                          isNeutral ? '\u20B90' : '${isDiscount ? "" : "+"}\u20B9${factor.amount.abs().toInt()}',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      factor['info'] as String,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
+                    Text(factor.info, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                   ],
                 ),
               ),
             );
           }),
           const SizedBox(height: 8),
+
           // Total
           GlassCard(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Total Weekly Premium',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  '\u20B9${MockData.weeklyPremium.toInt()}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
+                const Text('Total Weekly Premium', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                Text('\u20B9${result.totalPremium.toInt()}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.primary)),
               ],
             ),
           ),
           const SizedBox(height: 12),
+
+          // Info box
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.accent.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
             ),
             child: const Row(
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  color: AppColors.accent,
-                  size: 16,
-                ),
+                Icon(Icons.info_outline_rounded, color: AppColors.accent, size: 16),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Your premium is recalculated weekly based on ML models analyzing zone risk, weather forecasts, and your claim history.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
+                    'Premium auto-recalculates weekly using ML models on zone flood risk, weather forecasts, AQI levels, claim history, and vehicle type.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -721,6 +807,101 @@ class _InsuranceScreenState extends State<InsuranceScreen>
           const SizedBox(height: 100),
         ],
       ),
+    );
+  }
+
+  Widget _miniStat(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+          Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+        ],
+      ),
+    );
+  }
+
+  void _showZoneComparisonSheet() {
+    final cityZones = {
+      'Chennai': ['Adyar', 'Velachery', 'T. Nagar', 'Mylapore', 'Anna Nagar', 'Guindy', 'Porur', 'Tambaram'],
+      'Delhi': ['Connaught Place', 'Dwarka', 'Rohini', 'Saket', 'Lajpat Nagar', 'Karol Bagh'],
+      'Mumbai': ['Andheri', 'Bandra', 'Dadar', 'Borivali', 'Kurla', 'Goregaon', 'Powai'],
+    };
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgDark,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Compare Zone Premiums', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 4),
+              const Text('See how the AI adjusts pricing per zone', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 300,
+                child: ListView(
+                  children: (cityZones[_currentCity] ?? cityZones['Chennai']!).map((zone) {
+                    final result = PremiumEngine.calculate(
+                      zone: zone,
+                      city: _currentCity,
+                      vehicleType: MockData.workerVehicle,
+                      experienceWeeks: MockData.experienceWeeks,
+                      claimCount: MockData.totalClaimsPaid,
+                      tier: MockData.policyTier,
+                    );
+                    final isCurrent = zone == _currentZone;
+                    final profile = result.zoneProfile;
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _recalculatePremium(zone);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isCurrent ? AppColors.primary.withValues(alpha: 0.1) : AppColors.bgCard,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isCurrent ? AppColors.primary : AppColors.textMuted.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(zone, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isCurrent ? AppColors.primary : AppColors.textPrimary)),
+                                      if (isCurrent) ...[const SizedBox(width: 6), const Text('(Current)', style: TextStyle(fontSize: 10, color: AppColors.primary))],
+                                    ],
+                                  ),
+                                  Text(
+                                    'Flood: ${(profile.floodRiskScore * 100).toInt()}% · Rain: ${profile.predictedRainNextWeek}mm · AQI: ${profile.avgAqi}',
+                                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text('\u20B9${result.totalPremium.toInt()}/wk', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isCurrent ? AppColors.primary : AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -864,132 +1045,128 @@ class _InsuranceScreenState extends State<InsuranceScreen>
             ],
           ),
           const SizedBox(height: 12),
-          // Claims list
-          ...MockData.claimsHistory.map((claim) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GlassCard(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ClaimDetailScreen(claim: claim),
-                    ),
-                  );
-                },
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.check_circle_rounded,
-                            color: AppColors.success,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                claim['type'] as String,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                '${claim['date']} \u2022 ${claim['hours']}hrs disruption',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '+\u20B9${(claim['amount'] as double).toInt()}',
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.success,
-                              ),
-                            ),
-                            Text(
-                              'Score: ${claim['confidenceScore']}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Mini timeline
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.bgSurface,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Detected \u2192 Validated \u2192 Paid',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              const Text(
-                                'View Details',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppColors.primary,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
+          const SizedBox(height: 12),
+          // Claims list from Supabase
+          if (!SupabaseService.isConfigured)
+            ..._buildStaticClaimList(MockData.claimsHistory)
+          else
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: SupabaseService.client
+                  .from('claims')
+                  .stream(primaryKey: ['id'])
+                  .order('created_at', ascending: false),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary)));
+                }
+                
+                final dbClaims = snapshot.data!;
+                if (dbClaims.isEmpty) {
+                  return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No claims found yet.", style: TextStyle(color: AppColors.textSecondary))));
+                }
+
+                // Map Supabase claim schema back to Flutter UI schema
+                final mappedClaims = dbClaims.map((claim) {
+                  return {
+                    'id': claim['claim_id'],
+                    'date': 'Just now',
+                    'type': claim['trigger_label'],
+                    'amount': claim['payout_amount']?.toDouble() ?? 0.0,
+                    'status': claim['status'] == 'approved' ? 'Resolved' : 'Pending',
+                    'hours': claim['inactive_hours'] ?? 0,
+                    'confidenceScore': claim['confidence_score']?.toInt() ?? 0,
+                  };
+                }).toList();
+
+                return Column(
+                  children: _buildStaticClaimList(mappedClaims),
+                );
+              },
+            ),
           const SizedBox(height: 100),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildStaticClaimList(List<Map<String, dynamic>> claimsList) {
+    return claimsList.map((claim) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: GlassCard(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ClaimDetailScreen(claim: claim)),
+            );
+          },
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          claim['type'] as String,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        ),
+                        Text(
+                          '${claim['date']} \u2022 ${claim['hours']}hrs disruption',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '+\u20B9${(claim['amount'] as double).toInt()}',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.success),
+                      ),
+                      Text(
+                        'Score: ${claim['confidenceScore']}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: AppColors.bgSurface, borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Detected \u2192 Validated \u2192 Paid', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                    Row(
+                      children: [
+                        const Text('View Details', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 16),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList();
   }
 
   // ─── TAB 4: Active Triggers ────────────────────────────────────

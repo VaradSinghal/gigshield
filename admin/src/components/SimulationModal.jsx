@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, X, Sliders, Zap, CheckCircle, ShieldAlert } from 'lucide-react';
+import { supabase } from '../supabase';
 
 const SimulationModal = ({ onClose, onSimulate }) => {
   const [params, setParams] = useState({
@@ -43,29 +44,41 @@ const SimulationModal = ({ onClose, onSimulate }) => {
         const confidence = envScore + locScore + actScore + timeScore + devScore;
         const amount = Math.round(params.inactiveHours * params.hourlyRate * (params.coverage / 100));
 
-        const claim = {
-          id: `CLM-${Math.floor(Math.random() * 900000) + 100000}`,
-          date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }),
-          worker: params.workerId,
+        const claimDb = {
+          claim_id: `CLM-${Math.floor(Math.random() * 900000) + 100000}`,
+          worker_id: params.workerId,
           zone: 'T. Nagar (Simulated)',
-          trigger: params.triggerType,
-          triggerDetail: params.triggerData,
-          amount: amount,
+          city: 'Chennai',
+          trigger_type: params.triggerType.toLowerCase().replace(' ', '_'),
+          trigger_label: params.triggerType,
+          trigger_data: params.triggerData,
           status: confidence >= 80 ? 'approved' : confidence >= 50 ? 'soft_review' : 'rejected',
-          confidence: confidence,
-          hours: params.inactiveHours,
-          time: '1.2s (Simulated)',
-          signals: {
+          action: 'awaiting_payout',
+          confidence_score: confidence,
+          fraud_probability: 100 - confidence,
+          validation_signals: {
             env: { score: envScore, pass: params.envVerified },
             loc: { score: locScore, pass: params.gpsConsistent },
             act: { score: actScore, pass: params.activityCoherent },
             time: { score: timeScore, pass: params.timingCorrelated },
             dev: { score: devScore, pass: params.deviceClean },
-          }
+          },
+          inactive_hours: params.inactiveHours,
+          hourly_rate: params.hourlyRate,
+          coverage_pct: params.coverage,
+          payout_amount: amount
         };
 
-        onSimulate(claim);
-        onClose();
+        const pushToDb = async () => {
+          try {
+            const { error } = await supabase.from('claims').insert(claimDb);
+            if (error) console.error("Sim insertion error:", error);
+          } catch(e) {}
+          onSimulate(claimDb);
+          onClose();
+        };
+
+        pushToDb();
       }
     ];
 

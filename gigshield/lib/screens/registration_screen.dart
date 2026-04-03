@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../services/supabase_service.dart';
+import '../services/premium_engine.dart';
 
 class RegistrationScreen extends StatefulWidget {
   final VoidCallback onRegistrationComplete;
@@ -29,14 +31,22 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   String _selectedPlatform = 'Swiggy';
   String _vehicleType = 'Bike';
 
+  // Work Details (feeds into premium engine)
+  double _dailyHours = 8;
+  String _weeklyIncomeRange = '₹3000-5000';
+  bool _hadPriorInsurance = false;
+  final List<String> _incomeRanges = ['₹1000-3000', '₹3000-5000', '₹5000-8000', '₹8000+'];
+
   // Step 3: Zone
   String _selectedZone = 'Adyar';
 
-  // Step 4: Plan
-  int _selectedPlan = 1; // 0=Basic, 1=Standard, 2=Premium
+  // Step 4: AI Premium Output
+  bool _isCalculatingPremium = false;
+  PremiumResult? _calculatedPremium;
+  int _calculationStep = 0;
 
   final List<String> _cities = ['Chennai', 'Delhi', 'Mumbai'];
-  final List<String> _platforms = ['Swiggy', 'Zomato', 'Zepto'];
+  final List<String> _platforms = ['Swiggy', 'Zomato'];
   final List<String> _vehicles = ['Bike', 'Scooter', 'Bicycle'];
   final Map<String, List<String>> _cityZones = {
     'Chennai': [
@@ -94,7 +104,9 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     super.dispose();
   }
 
-  void _nextStep() {
+  bool _isRegistering = false;
+
+  void _nextStep() async {
     if (_currentStep < 3) {
       setState(() => _currentStep++);
       _pageController.animateToPage(
@@ -103,6 +115,47 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         curve: Curves.easeInOut,
       );
     } else {
+      if (_isRegistering) return;
+      
+      setState(() => _isRegistering = true);
+      
+      if (SupabaseService.isConfigured) {
+        try {
+          final workerId = '\${_nameController.text.split(' ')[0]}_${_phoneController.text.substring(6)}';
+          
+          final incomeMap = {'₹1000-3000': 2000, '₹3000-5000': 4000, '₹5000-8000': 6500, '₹8000+': 9000};
+          final weeklyIncome = incomeMap[_weeklyIncomeRange] ?? 4000;
+
+          await SupabaseService.client.from('workers').insert({
+            'worker_id': workerId,
+            'city': _selectedCity,
+            'zone': _selectedZone,
+            'primary_platform': _selectedPlatform,
+            'vehicle_type': _vehicleType,
+            'trust_score': _hadPriorInsurance ? 90 : 100,
+            'avg_daily_hours': _dailyHours,
+            'avg_daily_income': (weeklyIncome / 6).round(),
+            'avg_weekly_income': weeklyIncome,
+          });
+
+          await SupabaseService.client.from('policies').insert({
+            'policy_id': 'POL-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+            'worker_id': workerId,
+            'tier': 'Dynamic AI Tier',
+            'weekly_premium': _calculatedPremium?.totalPremium ?? 45,
+            'coverage_percentage': 85,
+            'coverage_ceiling': (weeklyIncome * 0.85).round(),
+            'start_date': DateTime.now().toIso8601String().split('T')[0],
+            'end_date': DateTime.now().add(const Duration(days: 90)).toIso8601String().split('T')[0],
+            'status': 'Active',
+            'premium_breakdown': {'base': 25, 'factors': _calculatedPremium?.factors.length ?? 0}
+          });
+        } catch (e) {
+          debugPrint('Registration sync error: \$e');
+        }
+      }
+
+      setState(() => _isRegistering = false);
       widget.onRegistrationComplete();
     }
   }
@@ -151,27 +204,31 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                             ),
                           ),
                         if (_currentStep > 0) const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _stepTitle,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _stepTitle,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
-                            ),
-                            Text(
-                              _stepSubtitle,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
+                              Text(
+                                _stepSubtitle,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 12),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -246,14 +303,20 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                       ),
                       elevation: 0,
                     ),
-                    child: Text(
-                      _currentStep == 3 ? 'Start Protection' : 'Continue',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isRegistering
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(
+                            _currentStep == 3 ? 'Start Protection' : 'Continue',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -273,7 +336,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       case 2:
         return 'Working Zone';
       case 3:
-        return 'Choose Plan';
+        return 'AI Premium Computation';
       default:
         return '';
     }
@@ -288,7 +351,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       case 2:
         return 'Select your primary working zone';
       case 3:
-        return 'Select your protection plan';
+        return 'Generating your personalized pricing';
       default:
         return '';
     }
@@ -303,7 +366,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       case 2:
         return _selectedZone.isNotEmpty;
       case 3:
-        return true;
+        return _calculatedPremium != null;
       default:
         return false;
     }
@@ -566,7 +629,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           _buildInputField('Full Name', _nameController, Icons.person_rounded),
           const SizedBox(height: 16),
           _buildDropdownField(
@@ -595,6 +658,113 @@ class _RegistrationScreenState extends State<RegistrationScreen>
             Icons.two_wheeler_rounded,
             (v) => setState(() => _vehicleType = v!),
           ),
+          const SizedBox(height: 24),
+          // Divider
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Container(width: 30, height: 1, color: AppColors.textMuted.withValues(alpha: 0.3)),
+                const SizedBox(width: 8),
+                const Text('Work Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                const SizedBox(width: 8),
+                Expanded(child: Container(height: 1, color: AppColors.textMuted.withValues(alpha: 0.3))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Daily Working Hours
+          const Text('Average Daily Working Hours', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.textMuted.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Text('${_dailyHours.toInt()} hours/day', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                      child: Text(_dailyHours >= 10 ? 'Heavy' : _dailyHours >= 6 ? 'Regular' : 'Part-time', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.accent)),
+                    ),
+                  ],
+                ),
+                Slider(
+                  value: _dailyHours,
+                  min: 2,
+                  max: 14,
+                  divisions: 12,
+                  activeColor: AppColors.primary,
+                  inactiveColor: AppColors.textMuted.withValues(alpha: 0.2),
+                  onChanged: (v) => setState(() => _dailyHours = v),
+                ),
+                const Text('This helps us estimate your income lost during disruptions', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Weekly Income
+          _buildDropdownField(
+            'Estimated Weekly Income',
+            _weeklyIncomeRange,
+            _incomeRanges,
+            Icons.account_balance_wallet_rounded,
+            (v) => setState(() => _weeklyIncomeRange = v!),
+          ),
+          const SizedBox(height: 16),
+
+          // Prior Insurance
+          const Text('Do you have prior insurance?', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _hadPriorInsurance = false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: !_hadPriorInsurance ? AppColors.primary.withValues(alpha: 0.1) : AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: !_hadPriorInsurance ? AppColors.primary : AppColors.textMuted.withValues(alpha: 0.3)),
+                    ),
+                    child: Center(child: Text('No, first time', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: !_hadPriorInsurance ? AppColors.primary : AppColors.textMuted))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _hadPriorInsurance = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _hadPriorInsurance ? AppColors.primary.withValues(alpha: 0.1) : AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _hadPriorInsurance ? AppColors.primary : AppColors.textMuted.withValues(alpha: 0.3)),
+                    ),
+                    child: Center(child: Text('Yes, I do', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _hadPriorInsurance ? AppColors.primary : AppColors.textMuted))),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -848,197 +1018,168 @@ class _RegistrationScreenState extends State<RegistrationScreen>
 
   // ─── Step 4: Plan Selection ─────────────────────────────────────
 
+  // ─── Step 4: AI Plan Computation ────────────────────────────────
+
+  Future<void> _runPremiumSimulation() async {
+    setState(() {
+      _isCalculatingPremium = true;
+      _calculationStep = 1;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    setState(() => _calculationStep = 2);
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    setState(() => _calculationStep = 3);
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+
+    // Use our actual ML Engine to grade their profile!
+    final result = PremiumEngine.calculate(
+      zone: _selectedZone,
+      city: _selectedCity,
+      vehicleType: _vehicleType,
+      experienceWeeks: _hadPriorInsurance ? 10 : 0, 
+      claimCount: 0, 
+      tier: 'Standard',
+    );
+
+    setState(() {
+      _calculatedPremium = result;
+      _isCalculatingPremium = false;
+      _calculationStep = 0;
+    });
+  }
+
   Widget _buildPlanStep() {
-    final plans = [
-      {
-        'name': 'Basic',
-        'price': 25,
-        'coverage': '50%',
-        'triggers': 3,
-        'icon': Icons.shield_outlined,
-        'color': AppColors.accent,
-        'features': [
-          'Heavy Rain coverage',
-          'Severe AQI coverage',
-          'Extreme Heat coverage',
-        ],
-      },
-      {
-        'name': 'Standard',
-        'price': 45,
-        'coverage': '70%',
-        'triggers': 5,
-        'icon': Icons.shield_rounded,
-        'color': AppColors.primary,
-        'features': [
-          'All Basic triggers',
-          'Flooding coverage',
-          'Civic Disruption coverage',
-          'Priority payouts',
-        ],
-        'recommended': true,
-      },
-      {
-        'name': 'Premium',
-        'price': 65,
-        'coverage': '85%',
-        'triggers': 5,
-        'icon': Icons.verified_rounded,
-        'color': AppColors.warning,
-        'features': [
-          'All Standard triggers',
-          '85% income coverage',
-          'Instant payouts',
-          'Predictive alerts',
-          'Dedicated support',
-        ],
-      },
-    ];
+    if (_calculatedPremium == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.auto_awesome, color: AppColors.primary, size: 48),
+                  const SizedBox(height: 16),
+                  const Text('AI Personalized Premium', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const SizedBox(height: 12),
+                  const Text('We dropped static plans! Tap below to let the GigKavach ML algorithm analyze your Zone, Vehicle, and Coverage requirement to build a custom dynamic premium strictly for you.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
+                  const SizedBox(height: 30),
+                  
+                  if (_isCalculatingPremium) ...[
+                    // Simulation Loading State
+                    Column(
+                      children: [
+                        const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)),
+                        const SizedBox(height: 16),
+                        Text('[ \u2713 ] Fetching Weather Forecast for $_selectedZone', style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: AppColors.success)),
+                        const SizedBox(height: 6),
+                        Text(_calculationStep >= 2 ? '[ \u2713 ] Aggregating Zone Flood History' : '[ ... ] Aggregating Zone Flood History', style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: _calculationStep >= 2 ? AppColors.success : AppColors.textMuted)),
+                        const SizedBox(height: 6),
+                        Text(_calculationStep >= 3 ? '[ \u2713 ] Regression Model Complete' : '[ ... ] Running Model...', style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: _calculationStep >= 3 ? AppColors.success : AppColors.textMuted)),
+                      ],
+                    )
+                  ] else ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _runPremiumSimulation,
+                        icon: const Icon(Icons.memory, color: Colors.white),
+                        label: const Text('Simulate AI Pricing API', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary, 
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ]
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final result = _calculatedPremium!;
+    final incomeMap = {'₹1000-3000': 2000, '₹3000-5000': 4000, '₹5000-8000': 6500, '₹8000+': 9000};
+    final weeklyIncome = incomeMap[_weeklyIncomeRange] ?? 4000;
+    final maxPayout = (weeklyIncome * 0.85).round();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        children: List.generate(plans.length, (i) {
-          final plan = plans[i];
-          final isSelected = _selectedPlan == i;
-          final color = plan['color'] as Color;
-          final isRecommended = plan['recommended'] == true;
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF6C5CE7), Color(0xFF00CEC9)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              children: [
+                const Text('Your Weekly Premium', style: TextStyle(fontSize: 14, color: Colors.white70)),
+                const SizedBox(height: 8),
+                Text('\u20B9${result.totalPremium.toInt()}', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text('Max Payout Ceiling: \u20B9$maxPayout /wk', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text('How AI calculated your price', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          const SizedBox(height: 12),
+          
+          ...result.factors.map((factor) {
+            final isDiscount = factor.amount < 0;
+            final isNeutral = factor.amount == 0;
+            final color = isDiscount ? AppColors.success : isNeutral ? AppColors.textMuted : (factor.type == 'base' ? AppColors.textPrimary : AppColors.warning);
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedPlan = i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withValues(alpha: 0.08)
-                      : AppColors.bgCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isSelected
-                        ? color
-                        : AppColors.textMuted.withValues(alpha: 0.3),
-                    width: isSelected ? 1.5 : 0.5,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.textMuted.withValues(alpha: 0.15))),
+              child: Row(
+                children: [
+                  Icon(isDiscount ? Icons.trending_down_rounded : isNeutral ? Icons.remove_rounded : Icons.add_circle_outline_rounded, color: color, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            plan['icon'] as IconData,
-                            color: color,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    plan['name'] as String,
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                      color: color,
-                                    ),
-                                  ),
-                                  if (isRecommended) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'RECOMMENDED',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: color,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              Text(
-                                '${plan['coverage']} income coverage \u2022 ${plan['triggers']} triggers',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '\u20B9${plan['price']}',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: color,
-                              ),
-                            ),
-                            const Text(
-                              '/week',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
+                        Text(factor.label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
+                        Text(factor.info, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
                       ],
                     ),
-                    if (isSelected) ...[
-                      const SizedBox(height: 12),
-                      const Divider(color: AppColors.textMuted, height: 1),
-                      const SizedBox(height: 12),
-                      ...(plan['features'] as List<String>).map(
-                        (f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Icon(Icons.check_rounded, color: color, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                f,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                  Text(isNeutral ? '\u20B90' : '${isDiscount ? "" : "+"}\u20B9${factor.amount.abs().toInt()}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color)),
+                ],
               ),
+            );
+          }),
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() => _calculatedPremium = null);
+              },
+              icon: const Icon(Icons.refresh, size: 16, color: AppColors.primary),
+              label: const Text('Change Inputs & Recalculate', style: TextStyle(color: AppColors.primary, fontSize: 13)),
             ),
-          );
-        }),
+          ),
+        ],
       ),
     );
   }

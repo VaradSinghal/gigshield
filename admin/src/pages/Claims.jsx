@@ -18,9 +18,23 @@ const Claims = () => {
   const [claimsData, setClaimsData] = useState([]);
   const [showSimulator, setShowSimulator] = useState(false);
 
-  const handleSimulate = (newClaim) => {
-    // Instantly inject the pure-JS simulation into the UI list for reviewers
-    setClaimsData(prev => [newClaim, ...prev]);
+  const handleSimulate = (c) => {
+    // Also inject the pure-JS simulation into the UI list directly for instant fallback rendering
+    const mappedClaim = {
+      id: c.claim_id,
+      date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }),
+      worker: c.worker_id,
+      zone: c.zone,
+      trigger: c.trigger_label,
+      triggerDetail: c.trigger_data,
+      amount: c.payout_amount,
+      status: c.status === 'approved' ? 'Auto-Approved' : c.status === 'soft_review' ? 'Soft Review' : 'Rejected',
+      confidence: c.confidence_score,
+      hours: c.inactive_hours,
+      time: '1.2s (Simulated)',
+      signals: c.validation_signals
+    };
+    setClaimsData(prev => [mappedClaim, ...prev]);
   };
 
   useEffect(() => {
