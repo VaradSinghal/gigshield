@@ -8,6 +8,7 @@ import 'screens/risk_map_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/registration_screen.dart';
+import 'screens/splash_screen.dart';
 import 'data/mock_data.dart';
 import 'services/supabase_service.dart';
 
@@ -41,17 +42,20 @@ class _GigKavachAppState extends State<GigKavachApp> {
     return MaterialApp(
       title: 'GigKavach',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: _isRegistered
-          ? const MainNavigationShell()
-          : RegistrationScreen(
-              onRegistrationComplete: () {
-                setState(() {
-                  _isRegistered = true;
-                  MockData.isRegistered = true;
-                });
-              },
-            ),
+      theme: AppTheme.lightTheme,
+      home: SplashScreen(
+        nextScreen: _isRegistered ? const MainNavigationShell() : RegistrationScreen(
+          onRegistrationComplete: (ctx) {
+            setState(() {
+              _isRegistered = true;
+              MockData.isRegistered = true;
+            });
+            Navigator.of(ctx).pushReplacement(
+              MaterialPageRoute(builder: (_) => const MainNavigationShell()),
+            );
+          },
+        ),
+      ),
     );
   }
 }

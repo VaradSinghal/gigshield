@@ -24,9 +24,16 @@ class GlassCard extends StatelessWidget {
         color: gradient == null ? AppColors.bgCard : null,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.textMuted.withValues(alpha: 0.3),
-          width: 0.5,
+          color: AppColors.textMuted.withValues(alpha: 0.15),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );

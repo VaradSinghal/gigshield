@@ -23,7 +23,6 @@ class MockData {
   static const Map<String, double> platformEarnings = {
     'Swiggy': 2150.0,
     'Zomato': 890.0,
-    'Zepto': 380.0,
   };
 
   static const List<double> weeklyDailyEarnings = [

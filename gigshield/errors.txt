@@ -1,0 +1,20 @@
+Analyzing lib...
+
+warning - main.dart:7:8 - Unused import: 'screens/risk_map_screen.dart'. Try removing the import directive. - unused_import
+warning - screens\registration_screen.dart:4:8 - Unused import: '../widgets/common_widgets.dart'. Try removing the import directive. - unused_import
+warning - screens\wallet_screen.dart:2:8 - Unused import: 'package:fl_chart/fl_chart.dart'. Try removing the import directive. - unused_import
+warning - services\premium_engine.dart:184:12 - The value of the local variable 'ageRiskLabel' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - services\supabase_service.dart:31:39 - The operand can't be 'null', so the condition is always 'true'. Remove the condition. - unnecessary_null_comparison
+   info - screens\insurance_screen.dart:29:10 - The private field _currentCity could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - screens\insurance_screen.dart:63:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - services\premium_engine.dart:597:25 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - services\premium_engine.dart:598:30 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - services\premium_engine.dart:599:31 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - services\premium_engine.dart:600:31 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - services\premium_engine.dart:601:10 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - services\supabase_service.dart:16:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - services\supabase_service.dart:17:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - services\supabase_service.dart:23:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - services\supabase_service.dart:25:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+
+16 issues found.

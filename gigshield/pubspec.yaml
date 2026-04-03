@@ -1,4 +1,4 @@
-name: GigKavach
+name: gigkavach
 description: "GigKavach - Unified Gig Worker Operating System"
 publish_to: 'none'
 version: 1.0.0+1
@@ -16,6 +16,7 @@ dependencies:
   intl: ^0.20.2
   supabase_flutter: ^2.12.2
   flutter_dotenv: ^6.0.0
+  flutter_svg: ^2.2.4
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +27,4 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/gigkavach-logo.svg

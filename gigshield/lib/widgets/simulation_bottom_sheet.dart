@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../theme/app_theme.dart';
 import '../services/supabase_service.dart';
+import '../services/claim_manager.dart';
 
 class SimulationBottomSheet extends StatefulWidget {
   const SimulationBottomSheet({super.key});
@@ -71,59 +72,40 @@ class _SimulationBottomSheetState extends State<SimulationBottomSheet> {
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
 
-    // Execute pure Dart conversion of Python ML logic
-    final envScore = _envVerified ? 30 : 10;
-    final locScore = _gpsConsistent ? 25 : 5;
-    final actScore = _activityCoherent ? 20 : 5;
-    final timeScore = _timingCorrelated ? 15 : 5;
-    final devScore = _deviceClean ? 10 : 2;
-
-    final confidence = envScore + locScore + actScore + timeScore + devScore;
-    final amount = (6 * 70 * 0.70).round(); // 6 inactive hours * 70 hourly rate * 70% coverage
-
-    final claimId = 'CLM-${Random().nextInt(900000) + 100000}';
-    final status = confidence >= 80 ? 'approved' : confidence >= 50 ? 'soft_review' : 'rejected';
-
-    final claimDb = {
-      'claim_id': claimId,
-      'worker_id': 'Ravi_K_72',
-      'zone': 'Active Zone (Simulated)',
-      'city': 'Chennai',
-      'trigger_type': _triggerType.toLowerCase().replaceAll(' ', '_'),
-      'trigger_label': _triggerType,
-      'trigger_data': _triggerData,
-      'status': status,
-      'action': 'awaiting_payout',
-      'confidence_score': confidence,
-      'fraud_probability': 100 - confidence,
-      'validation_signals': {
-        'env': {'score': envScore, 'pass': _envVerified},
-        'loc': {'score': locScore, 'pass': _gpsConsistent},
-        'act': {'score': actScore, 'pass': _activityCoherent},
-        'time': {'score': timeScore, 'pass': _timingCorrelated},
-        'dev': {'score': devScore, 'pass': _deviceClean},
-      },
-      'inactive_hours': 6,
-      'hourly_rate': 70,
-      'coverage_pct': 70,
-      'payout_amount': amount,
-    };
-
-    if (SupabaseService.isConfigured) {
-      try {
-        await SupabaseService.client.from('claims').insert(claimDb);
-      } catch (e) {
-        debugPrint("Sim insertion error: $e");
+    final claimEvent = await ClaimManager().submitParametricClaim(
+      workerId: 'Ravi_K_72',
+      triggerId: _triggerType.toLowerCase().replaceAll(' ', '_'),
+      triggerLabel: _triggerType,
+      triggerData: _triggerData,
+      zoneInfo: {'zone': 'Active Zone (Simulated)', 'city': 'Chennai'},
+      baseHourlyRate: 70,
+      coverageMultiplier: 0.70,
+    );
+    
+    if (claimEvent == null) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+             content: Text('Duplicate claim suppressed to prevent fraud.'),
+             backgroundColor: AppColors.warning,
+          )
+        );
       }
+      return;
     }
     
     // Also inject into local stream if we had a local provider, or just pop so the UI updates natively via Supabase StreamBuilder
     if (mounted) {
-      Navigator.pop(context, claimDb);
+      Navigator.pop(context);
+      
+      String msg = 'Claim ${claimEvent.status} for ₹${claimEvent.payoutAmount.toInt()}';
+      if (claimEvent.isSustained) msg += ' (Sustained Event Batch)';
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Simulated ML Validation (Score: $confidence) - Claim $status'),
-          backgroundColor: status == 'approved' ? AppColors.success : AppColors.danger,
+          content: Text(msg),
+          backgroundColor: claimEvent.status == 'approved' ? AppColors.success : AppColors.warning,
         )
       );
     }

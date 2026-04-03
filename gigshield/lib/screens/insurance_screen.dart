@@ -6,6 +6,7 @@ import '../services/supabase_service.dart';
 import '../services/premium_engine.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/simulation_bottom_sheet.dart';
+import '../widgets/demo_claim_overlay.dart';
 import 'claim_detail_screen.dart';
 
 class InsuranceScreen extends StatefulWidget {
@@ -40,7 +41,10 @@ class _InsuranceScreenState extends State<InsuranceScreen>
       vehicleType: MockData.workerVehicle,
       experienceWeeks: MockData.experienceWeeks,
       claimCount: MockData.totalClaimsPaid,
-      tier: MockData.policyTier,
+      driverAge: 28,
+      dailyTravelKm: 45,
+      dailyOrderVolume: 15,
+      dailyHours: 8,
     );
 
     if (SupabaseService.isConfigured) {
@@ -122,19 +126,11 @@ class _InsuranceScreenState extends State<InsuranceScreen>
       backgroundColor: AppColors.bgDark,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: const SimulationBottomSheet(),
-            ),
-          );
+          DemoClaimOverlay.show(context);
         },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.bug_report, color: Colors.white),
-        label: const Text('Trigger Sandbox', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.onboardBluePrimary,
+        icon: const Icon(Icons.play_circle_filled_rounded, color: Colors.white),
+        label: const Text('Simulate AI Claim', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         child: Column(
@@ -584,7 +580,10 @@ class _InsuranceScreenState extends State<InsuranceScreen>
         vehicleType: MockData.workerVehicle,
         experienceWeeks: MockData.experienceWeeks,
         claimCount: MockData.totalClaimsPaid,
-        tier: MockData.policyTier,
+        driverAge: 28,
+        dailyTravelKm: 45,
+        dailyOrderVolume: 15,
+        dailyHours: 8,
       );
       _isRecalculating = false;
     });
@@ -607,7 +606,7 @@ class _InsuranceScreenState extends State<InsuranceScreen>
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF6C5CE7), Color(0xFF00CEC9)],
+                colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -704,23 +703,6 @@ class _InsuranceScreenState extends State<InsuranceScreen>
                   ],
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Compare with another zone
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showZoneComparisonSheet(),
-              icon: const Icon(Icons.compare_arrows_rounded, size: 18),
-              label: const Text('Compare Premium for Different Zone'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
             ),
           ),
 
@@ -853,7 +835,10 @@ class _InsuranceScreenState extends State<InsuranceScreen>
                       vehicleType: MockData.workerVehicle,
                       experienceWeeks: MockData.experienceWeeks,
                       claimCount: MockData.totalClaimsPaid,
-                      tier: MockData.policyTier,
+                      driverAge: 28,
+                      dailyTravelKm: 45,
+                      dailyOrderVolume: 15,
+                      dailyHours: 8,
                     );
                     final isCurrent = zone == _currentZone;
                     final profile = result.zoneProfile;
@@ -1075,6 +1060,7 @@ class _InsuranceScreenState extends State<InsuranceScreen>
                     'status': claim['status'] == 'approved' ? 'Resolved' : 'Pending',
                     'hours': claim['inactive_hours'] ?? 0,
                     'confidenceScore': claim['confidence_score']?.toInt() ?? 0,
+                    'isSustained': claim['is_sustained'] == true,
                   };
                 }).toList();
 
@@ -1118,9 +1104,21 @@ class _InsuranceScreenState extends State<InsuranceScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          claim['type'] as String,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        Row(
+                          children: [
+                            Text(
+                              claim['type'] as String,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                            ),
+                            if (claim['isSustained'] == true) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                                child: const Text('Sustained', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.warning)),
+                              ),
+                            ],
+                          ],
                         ),
                         Text(
                           '${claim['date']} \u2022 ${claim['hours']}hrs disruption',
