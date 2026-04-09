@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp, Shield, Zap, Eye, ThumbsUp, ThumbsDown, Sliders } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp, Shield, Zap, Eye, ThumbsUp, ThumbsDown, Sliders, DollarSign, Activity, FileText } from 'lucide-react';
 import { supabase } from '../supabase';
-import SimulationModal from '../components/SimulationModal';
 
 const triggerStats = [
-  { name: 'Heavy Rainfall', count: 847, payout: '₹3.2L', color: '#74B9FF', pct: 42 },
-  { name: 'Severe AQI', count: 412, payout: '₹1.4L', color: '#A29BFE', pct: 20 },
-  { name: 'Flooding', count: 228, payout: '₹1.8L', color: '#FF6B6B', pct: 11 },
-  { name: 'Extreme Heat', count: 356, payout: '₹0.9L', color: '#FDAA49', pct: 18 },
-  { name: 'Civic Disruption', count: 180, payout: '₹0.7L', color: '#00CEC9', pct: 9 },
+  { name: 'Heavy Rainfall', count: 847, payout: '₹3.2L', color: 'var(--primary)', pct: 42 },
+  { name: 'Severe AQI', count: 412, payout: '₹1.4L', color: 'var(--accent)', pct: 20 },
+  { name: 'Flooding', count: 228, payout: '₹1.8L', color: 'var(--danger)', pct: 11 },
+  { name: 'Extreme Heat', count: 356, payout: '₹0.9L', color: 'var(--warning)', pct: 18 },
+  { name: 'Civic Disruption', count: 180, payout: '₹0.7L', color: 'var(--primary)', pct: 9 },
 ];
 
 const Claims = () => {
@@ -16,38 +15,17 @@ const Claims = () => {
   const [expandedRow, setExpandedRow] = useState(null);
   const [reviewActions, setReviewActions] = useState({});
   const [claimsData, setClaimsData] = useState([]);
-  const [showSimulator, setShowSimulator] = useState(false);
-
-  const handleSimulate = (c) => {
-    // Also inject the pure-JS simulation into the UI list directly for instant fallback rendering
-    const mappedClaim = {
-      id: c.claim_id,
-      date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }),
-      worker: c.worker_id,
-      zone: c.zone,
-      trigger: c.trigger_label,
-      triggerDetail: c.trigger_data,
-      amount: c.payout_amount,
-      status: c.status === 'approved' ? 'Auto-Approved' : c.status === 'soft_review' ? 'Soft Review' : 'Rejected',
-      confidence: c.confidence_score,
-      hours: c.inactive_hours,
-      time: '1.2s (Simulated)',
-      signals: c.validation_signals
-    };
-    setClaimsData(prev => [mappedClaim, ...prev]);
-  };
 
   useEffect(() => {
-    // Initial Fetch
     const fetchClaims = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('claims')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
       
       if (data) {
-        const mapped = data.map(c => ({
+        setClaimsData(data.map(c => ({
           id: c.claim_id,
           date: new Date(c.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }),
           worker: c.worker_id,
@@ -55,265 +33,178 @@ const Claims = () => {
           trigger: c.trigger_label,
           triggerDetail: c.trigger_data,
           amount: c.payout_amount,
-          status: c.status === 'approved' ? 'Auto-Approved' : c.status === 'soft_review' ? 'Soft Review' : 'Rejected',
+          status: c.status === 'approved' ? 'AUTO-APPROVED' : c.status === 'soft_review' ? 'REVIEW' : 'REJECTED',
           confidence: c.confidence_score,
           hours: c.inactive_hours,
-          time: '3m 12s',
-          signals: c.validation_signals || { env: {score:30,pass:true}, loc: {score:25,pass:true}, act:{score:20,pass:true}, time:{score:15,pass:true}, dev:{score:10,pass:true} }
-        }));
-        setClaimsData(mapped);
-      } else {
-        // Fallback demo data if unconnected
-        setClaimsData([
-          { id: 'CLM-100847', date: 'Mar 12, 14:22', worker: 'Ravi Kumar', zone: 'Adyar', trigger: 'Heavy Rainfall', triggerDetail: '48mm in 6hrs', amount: 420, status: 'Auto-Approved', confidence: 92, hours: 6, time: '4m 12s',
-            signals: { env: { score: 30, pass: true }, loc: { score: 25, pass: true }, act: { score: 20, pass: true }, time: { score: 15, pass: true }, dev: { score: 2, pass: false } }
-          }
-        ]);
+          signals: c.validation_signals || { api_failure: true }
+        })));
       }
     };
     fetchClaims();
 
-    // Supabase Realtime Subscription
-    const channel = supabase
-      .channel('public:claims')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'claims' }, payload => {
-        const c = payload.new;
-        const mappedClaim = {
-          id: c.claim_id,
-          date: new Date(c.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }),
-          worker: c.worker_id,
-          zone: c.zone,
-          trigger: c.trigger_label,
-          triggerDetail: c.trigger_data,
-          amount: c.payout_amount,
-          status: c.status === 'approved' ? 'Auto-Approved' : c.status === 'soft_review' ? 'Soft Review' : 'Rejected',
-          confidence: c.confidence_score,
-          hours: c.inactive_hours,
-          time: '<1m',
-          signals: c.validation_signals || { env: {score:30,pass:true}, loc: {score:25,pass:true}, act:{score:20,pass:true}, time:{score:15,pass:true}, dev:{score:10,pass:true} }
-        };
-        setClaimsData(prev => [mappedClaim, ...prev]);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const sub = supabase.channel('claims-registry-updates').on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, fetchClaims).subscribe();
+    return () => supabase.removeChannel(sub);
   }, []);
 
   const handleAction = async (claimId, action) => {
     setReviewActions(prev => ({ ...prev, [claimId]: action }));
-    
-    // Persist to Supabase
     const status = action === 'approved' ? 'approved' : 'rejected';
-    const { error } = await supabase
-      .from('claims')
-      .update({ status, action: status })
-      .eq('claim_id', claimId);
-    
-    if (error) console.error('Error updating claim:', error);
+    await supabase.from('claims').update({ status }).eq('claim_id', claimId);
   };
 
-  const getStatusChip = (claim) => {
+  const getStatusBadge = (claim) => {
     const action = reviewActions[claim.id];
-    if (action === 'approved') return <span className="status-chip status-success" style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'fit-content' }}><CheckCircle size={14} /> Approved</span>;
-    if (action === 'rejected') return <span className="status-chip status-danger" style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'fit-content' }}><XCircle size={14} /> Rejected</span>;
-
-    if (claim.status === 'Auto-Approved') return <span className="status-chip status-success" style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'fit-content' }}><CheckCircle size={14} /> {claim.time}</span>;
-    if (claim.status === 'Rejected') return <span className="status-chip status-danger" style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'fit-content' }}><XCircle size={14} /> Rejected</span>;
-    return <span className="status-chip status-warning" style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'fit-content' }}><Clock size={14} /> Review</span>;
+    const status = action ? action.toUpperCase() : claim.status;
+    
+    if (status.includes('APPROVE')) return <span className="badge-neon badge-success">{status}</span>;
+    if (status.includes('REJECT')) return <span className="badge-neon badge-danger">{status}</span>;
+    return <span className="badge-neon badge-warning">{status}</span>;
   };
 
   return (
-    <div>
-      <div className="page-title">Claims & Payouts Engine</div>
-
-      <div className="grid-cols-3">
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span className="stat-title">Zero-Touch Rate</span>
-            <div className="stat-icon" style={{ background: 'var(--bg-surface)', color: 'var(--success)' }}><CheckCircle size={20} /></div>
-          </div>
-          <div className="stat-value">85.7%</div>
-          <div className="stat-trend trend-up">6 of 7 claims auto-processed</div>
+    <div className="claims-sentinel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-1px' }}>FINANCIAL REGISTRY</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Autonomous parametric payout ledger and settlement controls</p>
         </div>
-
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span className="stat-title">Loss Ratio</span>
-            <div className="stat-icon" style={{ background: 'var(--bg-card-light)', color: 'var(--primary)' }}><Shield size={20} /></div>
-          </div>
-          <div className="stat-value">58.2%</div>
-          <div className="stat-trend trend-up" style={{ color: 'var(--success)' }}>Target: 55-65% ✓</div>
-        </div>
-
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span className="stat-title">Avg Confidence</span>
-            <div className="stat-icon" style={{ background: 'rgba(230, 81, 0, 0.1)', color: 'var(--warning)' }}><Zap size={20} /></div>
-          </div>
-          <div className="stat-value">79.3</div>
-          <div className="stat-trend trend-up">ML fraud detection score</div>
+        <div style={{ display: 'flex', gap: '16px' }}>
+             <button className="payout-btn" style={{ background: 'transparent', border: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileText size={18} /> EXPORT LEDGER
+             </button>
         </div>
       </div>
 
-      <div className="glass-card" style={{ marginBottom: '24px' }}>
-        <div className="card-title">Trigger Analytics</div>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div className="grid-auto" style={{ padding: 0, marginBottom: '40px' }}>
+        <div className="glass-card stat-item">
+          <span className="stat-label">System Autonomy</span>
+          <div className="stat-value">85.7%</div>
+          <div style={{ fontSize: '12px', color: 'var(--success)' }}>✓ EXCEEDS TARGET RECOVERY</div>
+        </div>
+        <div className="glass-card stat-item">
+          <span className="stat-label">Loss Adjustment</span>
+          <div className="stat-value">58.2%</div>
+          <div style={{ fontSize: '12px', color: 'var(--primary)' }}>NOMINAL RISK SPREAD</div>
+        </div>
+        <div className="glass-card stat-item">
+          <span className="stat-label">Mean Confidence</span>
+          <div className="stat-value">79.3</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>PHASE 5 NEURAL VALIDATION</div>
+        </div>
+      </div>
+
+      <div className="glass-card" style={{ marginBottom: '40px', padding: '32px' }}>
+        <h3 className="brand-font" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+           <Activity size={20} color="var(--primary)" /> TRIGGER DISTRIBUTION
+        </h3>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           {triggerStats.map((t, i) => (
-            <div key={i} style={{ flex: '1', minWidth: '150px', padding: '12px', background: 'var(--bg-surface)', borderRadius: '12px', borderLeft: `3px solid ${t.color}` }}>
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{t.name}</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>{t.count}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t.payout} paid</span>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: t.color }}>{t.pct}%</span>
+            <div key={i} style={{ flex: '1', minWidth: '180px', padding: '20px', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>{t.name}</div>
+              <div style={{ fontSize: '24px', fontWeight: 800 }}>{t.payout}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '11px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{t.count} CLAIMS</span>
+                <span style={{ color: t.color, fontWeight: 700 }}>{t.pct}%</span>
               </div>
-              <div style={{ marginTop: '6px', height: '4px', background: 'var(--bg-card)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${t.pct}%`, background: t.color, borderRadius: '2px' }} />
+              <div style={{ marginTop: '10px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }}>
+                <div style={{ height: '100%', width: `${t.pct}%`, background: t.color, boxShadow: `0 0 10px ${t.color}` }} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="glass-card">
-        <div className="flex-between" style={{ marginBottom: '24px' }}>
-          <div className="card-title" style={{ margin: 0 }}>Live Claims Log</div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button 
-              onClick={() => setShowSimulator(true)}
-              style={{ padding: '8px 16px', background: 'var(--primary)', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <Sliders size={16} /> Simulate AI Payload
-            </button>
-            <div className="header-search" style={{ width: '250px' }}>
-              <Search size={16} color="var(--text-secondary)" />
-              <input type="text" placeholder="Search claims..." />
-            </div>
-            <select
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '8px 12px', borderRadius: '8px', outline: 'none' }}
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="All">All Claims</option>
-              <option value="Auto-Approved">Auto-Approved</option>
-              <option value="Soft Review">Soft Review</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-          </div>
+      <div className="glass-card" style={{ padding: '0' }}>
+        <div style={{ padding: '32px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <h3 className="brand-font" style={{ margin: 0 }}>SETTLEMENT LOG</h3>
+           <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="header-search" style={{ background: 'rgba(0,0,0,0.3)', width: '300px' }}>
+                 <Search size={16} />
+                 <input type="text" placeholder="Filter by Claim ID or Worker..." />
+              </div>
+           </div>
         </div>
 
-        {showSimulator && <SimulationModal onClose={() => setShowSimulator(false)} onSimulate={handleSimulate} />}
-
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Claim ID</th>
-              <th>Date & Time</th>
-              <th>Worker</th>
-              <th>Trigger</th>
-              <th>Confidence</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {claimsData
-              .filter(c => filter === 'All' || c.status === filter)
-              .map((claim, i) => (
-              <React.Fragment key={i}>
-                <tr onClick={() => setExpandedRow(expandedRow === i ? null : i)} style={{ cursor: 'pointer' }}>
-                  <td>{expandedRow === i ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}</td>
-                  <td style={{ color: 'var(--primary)', fontWeight: 500 }}>{claim.id}</td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{claim.date}</td>
-                  <td>
-                    <div>{claim.worker}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{claim.zone}</div>
-                  </td>
-                  <td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', padding: '4px 8px', borderRadius: '6px', fontSize: '12px' }}>
-                      {claim.trigger}
-                    </span>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{claim.triggerDetail}</div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '36px', height: '36px', borderRadius: '50%',
-                        background: `conic-gradient(${claim.confidence >= 80 ? 'var(--success)' : claim.confidence >= 50 ? 'var(--warning)' : 'var(--danger)'} ${claim.confidence}%, var(--bg-surface) 0)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {claim.confidence}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>₹{claim.amount}</td>
-                  <td>{getStatusChip(claim)}</td>
-                </tr>
-                {expandedRow === i && (
-                  <tr>
-                    <td colSpan="8" style={{ padding: '0 20px 20px' }}>
-                      <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                          Fraud Validation Breakdown — {claim.confidence}/100
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
-                          {[
-                            { label: 'Environmental', key: 'env', max: 30 },
-                            { label: 'Location', key: 'loc', max: 25 },
-                            { label: 'Activity', key: 'act', max: 20 },
-                            { label: 'Timing', key: 'time', max: 15 },
-                            { label: 'Device', key: 'dev', max: 10 },
-                          ].map((signal, j) => {
-                            const s = claim.signals[signal.key] || { score: 0, pass: false };
-                            return (
-                              <div key={j} style={{ padding: '10px', background: 'var(--bg-card)', borderRadius: '8px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{signal.label}</div>
-                                <div style={{ fontSize: '18px', fontWeight: 700, color: s.pass ? 'var(--success)' : 'var(--danger)' }}>
-                                  {s.score}/{signal.max}
-                                </div>
-                                <div style={{ fontSize: '10px', color: s.pass ? 'var(--success)' : 'var(--danger)', marginTop: '2px' }}>
-                                  {s.pass ? '✓ Passed' : '✗ Failed'}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            Payout: {claim.hours}hrs × ₹70/hr × 70% = <strong>₹{claim.amount}</strong>
-                          </div>
-                          {claim.status === 'Soft Review' && !reviewActions[claim.id] && (
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleAction(claim.id, 'approved'); }}
-                                style={{ padding: '6px 16px', background: 'var(--success)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}
-                              >
-                                <ThumbsUp size={14} /> Approve
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleAction(claim.id, 'rejected'); }}
-                                style={{ padding: '6px 16px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}
-                              >
-                                <ThumbsDown size={14} /> Reject
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+        <div style={{ padding: '24px 32px 40px' }}>
+          <table className="sentinel-table">
+            <thead>
+              <tr>
+                <th width="40"></th>
+                <th>CLAIM ID</th>
+                <th>WORKER IDENT</th>
+                <th>TRIGGER EVENT</th>
+                <th>CONFIDENCE</th>
+                <th>PAYOUT</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {claimsData.map((claim, i) => (
+                <React.Fragment key={i}>
+                  <tr onClick={() => setExpandedRow(expandedRow === i ? null : i)} style={{ cursor: 'pointer' }}>
+                    <td>{expandedRow === i ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}</td>
+                    <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{claim.id}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{claim.worker}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{claim.zone}</div>
                     </td>
+                    <td>
+                       <div style={{ fontSize: '13px' }}>{claim.trigger}</div>
+                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{claim.triggerDetail}</div>
+                    </td>
+                    <td>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                             <div style={{ height: '100%', width: `${claim.confidence}%`, background: claim.confidence > 70 ? 'var(--success)' : 'var(--warning)', borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ fontSize: '12px', fontWeight: 700 }}>{claim.confidence}%</span>
+                       </div>
+                    </td>
+                    <td style={{ fontWeight: 800 }}>₹{claim.amount}</td>
+                    <td>{getStatusBadge(claim)}</td>
                   </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+                  
+                  {expandedRow === i && (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '0 16px 16px' }}>
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+                           <h4 style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginBottom: '20px', letterSpacing: '1px' }}>SENTINEL VALIDATION SIGNALS</h4>
+                           
+                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+                              {Object.entries(claim.signals).map(([key, signal], k) => (
+                                <div key={k} style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-glass)', textAlign: 'center' }}>
+                                   <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{key}</div>
+                                   <div style={{ fontWeight: 700, color: signal.pass !== false ? 'var(--success)' : 'var(--danger)' }}>
+                                      {signal.score !== undefined ? `${signal.score} PTS` : (signal.pass !== false ? '✓ PASS' : '✗ FAIL')}
+                                   </div>
+                                </div>
+                              ))}
+                           </div>
+
+                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                 PARAMETRIC AUDIT: {claim.hours} HRS @ BASE RATE · AUTO-SETTLED
+                              </div>
+                              {claim.status === 'REVIEW' && !reviewActions[claim.id] && (
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                   <button onClick={(e) => { e.stopPropagation(); handleAction(claim.id, 'approved'); }} className="payout-btn" style={{ padding: '8px 20px', fontSize: '12px' }}>AUTHORIZE</button>
+                                   <button onClick={(e) => { e.stopPropagation(); handleAction(claim.id, 'rejected'); }} style={{ padding: '8px 20px', fontSize: '12px', background: 'transparent', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '12px', cursor: 'pointer' }}>BLOCK</button>
+                                </div>
+                              )}
+                           </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
+
 
 export default Claims;

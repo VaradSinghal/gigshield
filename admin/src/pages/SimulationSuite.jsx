@@ -8,12 +8,13 @@ import {
   MapPin, 
   CloudRain, 
   Smartphone, 
-  ArrowRight,
+  ChevronRight,
   ShieldAlert,
   Fingerprint,
-  Activity
+  Activity,
+  Cpu
 } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { GigKavachApi } from '../api';
 
 const SimulationSuite = () => {
   const [scenarios, setScenarios] = useState([]);
@@ -28,8 +29,7 @@ const SimulationSuite = () => {
 
   const fetchScenarios = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/v1/simulation/scenarios');
-      const data = await res.json();
+      const data = await GigKavachApi.getScenarios();
       setScenarios(data);
       if (data.length > 0) setSelectedScenario(data[0]);
     } catch (err) {
@@ -43,15 +43,11 @@ const SimulationSuite = () => {
     setResults(null);
     setStep(1);
 
-    // Artificial delays for "visual demonstration" sequence
     setTimeout(() => setStep(2), 1500); 
     setTimeout(() => setStep(3), 3000);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/simulation/run/${selectedScenario.id}`, {
-        method: 'POST'
-      });
-      const data = await res.json();
+      const data = await GigKavachApi.runScenario(selectedScenario.id);
       
       setTimeout(() => {
         setResults(data);
@@ -71,265 +67,202 @@ const SimulationSuite = () => {
   };
 
   return (
-    <div className="simulation-container">
-      <div className="flex-between header-section">
+    <div className="simulation-sentinel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
         <div>
-          <h1 className="page-title">Digital Twin & Simulation Mission Control</h1>
-          <p className="text-muted">Live stress-testing of AI Fraud and Parametric Payout engines.</p>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-1px' }}>DIGITAL TWIN SIMULATOR</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Adversarial testing environment for AI Fraud & Parametric Payout engines</p>
         </div>
-        <div className="flex-gap">
-          <button className="secondary-btn" onClick={resetAll} disabled={isRunning}>
-            <RotateCcw size={18} /> Reset Suite
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button onClick={resetAll} disabled={isRunning} style={{ padding: '12px 20px', background: 'transparent', border: '1px solid var(--border-glass)', borderRadius: '12px', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <RotateCcw size={18} /> RESET
           </button>
-          <button className="primary-btn" onClick={runSimulation} disabled={isRunning}>
-            <Play size={18} fill="currentColor" /> Run Full Simulation
+          <button onClick={runSimulation} disabled={isRunning} className="payout-btn" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Play size={18} fill="currentColor" /> INITIATE FULL SEQUENCE
           </button>
         </div>
       </div>
 
-      <div className="grid-main">
-        {/* Left Sidebar: Scenarios */}
-        <div className="scenario-selector glass-card">
-          <h3 className="card-title">Test Scenarios</h3>
-          <div className="scenario-list">
-            {scenarios.map((s) => (
-              <div 
-                key={s.id} 
-                className={`scenario-item ${selectedScenario?.id === s.id ? 'active' : ''}`}
-                onClick={() => !isRunning && setSelectedScenario(s)}
-              >
-                <div className="scenario-info">
-                  <div className="scenario-name">{s.name}</div>
-                  <div className="scenario-type">{s.fraud_type.replace('_', ' ')}</div>
-                </div>
-                {s.expected_outcome === 'auto_approve' ? 
-                  <ShieldCheck size={16} color="var(--success)" /> : 
-                  <ShieldAlert size={16} color="var(--danger)" />
-                }
-              </div>
-            ))}
-          </div>
-
-          <div className="worker-profile mt-24">
-            <h4 className="section-subtitle">Worker Profile Details</h4>
-            {selectedScenario && (
-              <div className="details-grid">
-                <div className="detail-item">
-                  <span className="label">ID:</span>
-                  <span className="value">{selectedScenario.profile.worker_id}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">Zone:</span>
-                  <span className="value">{selectedScenario.profile.zone}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">Trust:</span>
-                  <span className="value">{(selectedScenario.profile.trust_score * 100).toFixed(0)}%</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Center: The Simulation Canvas */}
-        <div className="simulation-canvas glass-card">
-          <div className="canvas-header flex-between">
-            <div className="flex-gap">
-              <div className={`step-dot ${step >= 1 ? 'active' : ''}`}></div>
-              <div className={`step-line ${step >= 2 ? 'active' : ''}`}></div>
-              <div className={`step-dot ${step >= 2 ? 'active' : ''}`}></div>
-              <div className={`step-line ${step >= 3 ? 'active' : ''}`}></div>
-              <div className={`step-dot ${step >= 3 ? 'active' : ''}`}></div>
-              <div className={`step-line ${step >= 4 ? 'active' : ''}`}></div>
-              <div className={`step-dot ${step >= 4 ? 'active' : ''}`}></div>
-            </div>
-            <span className="status-label">{isRunning ? 'Running Simulation...' : 'Ready'}</span>
-          </div>
-
-          <div className="canvas-body">
-            {/* Step 1: Premium Quote */}
-            <div className={`stage-card ${step === 1 ? 'focused' : step > 1 ? 'completed' : 'pending'}`}>
-              <div className="stage-icon"><Zap size={24} /></div>
-              <div className="stage-content">
-                <h4>Dynamic Premium Calc</h4>
-                {step >= 1 && (
-                  <div className="stage-data">
-                    <p>Analyzing risk for {selectedScenario.profile.zone}...</p>
-                    {results && <div className="result-val highlight">Premium: ₹{results.premium.weekly_premium}</div>}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Step 2: Parametric Event */}
-            <div className={`stage-card ${step === 2 ? 'focused' : step > 2 ? 'completed' : 'pending'}`}>
-              <div className="stage-icon"><CloudRain size={24} /></div>
-              <div className="stage-content">
-                <h4>Parametric Disruption</h4>
-                {step >= 2 && (
-                  <div className="stage-data">
-                    <p>Trigger: {results?.trigger.label || 'Detecting...'}</p>
-                    <div className="progress-mini"><div className="progress-bar active" style={{width: '70%'}}></div></div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Step 3: Mobile App Submit */}
-            <div className={`stage-card ${step === 3 ? 'focused' : step > 3 ? 'completed' : 'pending'}`}>
-              <div className="stage-icon"><Smartphone size={24} /></div>
-              <div className="stage-content">
-                <h4>Mobile App Workflow</h4>
-                <div className="mobile-view-mock">
-                  <div className="mobile-inner">
-                    <div className="mobile-header">GigKavach App</div>
-                    {step === 3 && <div className="mobile-anim">Triggering Claim...</div>}
-                    {step > 3 && <div className="mobile-success">Claim Submitted</div>}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 4: AI Decision */}
-            <div className={`stage-card ${step === 4 ? 'focused' : 'pending'}`}>
-              <div className="stage-icon"><ShieldCheck size={24} /></div>
-              <div className="stage-content">
-                <h4>AI Fraud Decisions</h4>
-                {results && (
-                  <div className="decision-box">
-                    <div className={`outcome ${results.claim.action}`}>
-                      {results.claim.action_label}
-                    </div>
-                    <div className="score-meter">
-                      Confidence: {results.claim.confidence_score}%
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Detailed Fraud Analysis */}
-        <div className="fraud-analysis glass-card">
-          <h3 className="card-title">Multi-Signal Intelligence</h3>
-          {results ? (
-            <div className="signals-stack">
-              {Object.entries(results.claim.validation_signals).map(([key, signal]) => (
-                <div key={key} className="signal-row">
-                  <div className="flex-between">
-                    <span className="signal-key">{key.toUpperCase()}</span>
-                    <span className={`signal-status ${signal.passed ? 'pass' : 'fail'}`}>
-                      {signal.passed ? 'Pass' : 'Failed'}
-                    </span>
-                  </div>
-                  <div className="signal-detail">{signal.detail}</div>
+      <div className="grid-cols-3" style={{ gridTemplateColumns: '1fr 2fr 1fr', gap: '40px', alignItems: 'start' }}>
+        
+        {/* Left: Scenarios */}
+        <div className="glass-card" style={{ padding: '24px' }}>
+           <h3 className="brand-font" style={{ marginBottom: '24px', fontSize: '16px', color: 'var(--primary)' }}>TEST VECTOR SELECTION</h3>
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {scenarios.map((s) => (
+                <div 
+                  key={s.id}
+                  onClick={() => !isRunning && setSelectedScenario(s)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: '1px solid',
+                    borderColor: selectedScenario?.id === s.id ? 'var(--primary)' : 'var(--border-glass)',
+                    background: selectedScenario?.id === s.id ? 'rgba(0, 229, 255, 0.05)' : 'transparent',
+                    cursor: isRunning ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: selectedScenario?.id === s.id ? 'var(--shadow-neon)' : 'none'
+                  }}
+                >
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px' }}>{s.name}</span>
+                      {s.expected_outcome === 'auto_approve' ? <ShieldCheck size={14} color="var(--success)" /> : <ShieldAlert size={14} color="var(--danger)" />}
+                   </div>
+                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>TYPE: {s.fraud_type.replace('_', ' ')}</div>
                 </div>
               ))}
-              <div className="final-verdict-box mt-24">
-                <h4>System Reasoning</h4>
-                <p className="reasoning-text">"{results.claim.rejection_reason || results.claim.review_reason || 'Patterns match expected worker behavior profiles.'}"</p>
-              </div>
-            </div>
-          ) : (
-            <div className="empty-state">
-              <Fingerprint size={48} color="var(--border)" />
-              <p>Execute simulation to see real-time fraud signal decomposition.</p>
-            </div>
-          )}
+           </div>
+           
+           {selectedScenario && (
+             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-glass)' }}>
+                <h4 style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>WORKER SUBJECT DATA</h4>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                   <div className="flex-between">
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ID:</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600 }}>{selectedScenario.profile.worker_id}</span>
+                   </div>
+                   <div className="flex-between">
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Zone:</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600 }}>{selectedScenario.profile.zone}</span>
+                   </div>
+                   <div className="flex-between">
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Trust Score:</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--success)' }}>{(selectedScenario.profile.trust_score * 100).toFixed(0)}%</span>
+                   </div>
+                </div>
+             </div>
+           )}
         </div>
-      </div>
 
-      <style jsx>{`
-        .simulation-container {
-          padding: 24px;
-        }
-        .header-section { margin-bottom: 32px; }
-        .grid-main {
-          display: grid;
-          grid-template-columns: 300px 1fr 350px;
-          gap: 24px;
-          height: calc(100vh - 180px);
-        }
-        .scenario-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-        .scenario-item {
-          padding: 12px;
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-        .scenario-item:hover { border-color: var(--primary); }
-        .scenario-item.active { 
-          background: var(--bg-surface);
-          border-color: var(--primary);
-          box-shadow: 0 0 0 1px var(--primary);
-        }
-        .scenario-name { font-weight: 600; font-size: 14px; }
-        .scenario-type { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
-        
-        .stage-card {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid var(--border);
-          border-radius: 16px;
-          padding: 20px;
-          margin-bottom: 16px;
-          display: flex;
-          gap: 20px;
-          align-items: center;
-          transition: 0.4s;
-        }
-        .stage-card.focused { border-color: var(--primary); box-shadow: 0 0 20px rgba(71, 107, 255, 0.2); transform: scale(1.02); }
-        .stage-card.completed { border-color: var(--success); opacity: 0.8; }
-        .result-val { font-size: 18px; font-weight: 700; color: var(--primary); }
-        
-        .mobile-view-mock {
-          width: 140px;
-          height: 80px;
-          background: #000;
-          border-radius: 12px;
-          padding: 4px;
-          border: 2px solid #333;
-        }
-        .mobile-inner {
-          background: white;
-          height: 100%;
-          border-radius: 8px;
-          color: black;
-          font-size: 9px;
-          padding: 4px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-        }
-        .mobile-header { font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #eee; width: 100%; text-align: center; }
-        
-        .signal-row {
-          padding: 12px 0;
-          border-bottom: 1px solid var(--border);
-        }
-        .signal-key { font-size: 12px; font-weight: 700; }
-        .signal-status.pass { color: var(--success); font-weight: bold; }
-        .signal-status.fail { color: var(--danger); font-weight: bold; }
-        .signal-detail { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-        
-        .outcome {
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 700;
-          display: inline-block;
-          margin-top: 12px;
-        }
-        .outcome.paid, .outcome.auto_approved { background: rgba(0, 200, 83, 0.1); color: var(--success); }
-        .outcome.rejected { background: rgba(255, 23, 68, 0.1); color: var(--danger); }
-        .outcome.soft_review { background: rgba(255, 171, 0, 0.1); color: var(--warning); }
-      `}</style>
+        {/* Center: Live Stage */}
+        <div className="glass-card neon-border" style={{ padding: '0', overflow: 'hidden', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+           <div style={{ padding: '24px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                 {[1,2,3,4].map(i => (
+                   <div key={i} style={{ width: '40px', height: '4px', borderRadius: '2px', background: step >= i ? 'var(--primary)' : 'var(--border-glass)', boxShadow: step >= i ? '0 0 10px var(--primary)' : 'none' }} />
+                 ))}
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '1px', color: isRunning ? 'var(--primary)' : 'var(--text-muted)' }}>
+                 {isRunning ? 'SEQUENCE ACTIVE' : 'SYSTEM IDLE'}
+              </div>
+           </div>
+           
+           <div style={{ flex: 1, padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* STAGE 1 */}
+              <div style={{ 
+                display: 'flex', gap: '24px', alignItems: 'center', padding: '24px', borderRadius: '16px', 
+                border: '1px solid', borderColor: step === 1 ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+                background: step === 1 ? 'rgba(0, 229, 255, 0.05)' : step > 1 ? 'rgba(0, 255, 148, 0.03)' : 'transparent',
+                opacity: step >= 1 ? 1 : 0.3
+              }}>
+                 <div className="brand-icon" style={{ width: '48px', height: '48px', background: step >= 1 ? 'linear-gradient(135deg, var(--primary), var(--accent))' : '#111' }}>
+                    <Zap size={20} color="white" />
+                 </div>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>STAGE 01</div>
+                    <div style={{ fontWeight: 700 }}>NEURAL PREMIUM CALCULATION</div>
+                    {step === 1 && <div style={{ fontSize: '12px', color: 'var(--primary)', marginTop: '4px' }}>Synthesizing hyper-local risk factors...</div>}
+                    {step > 1 && results && <div style={{ fontSize: '14px', color: 'var(--success)', marginTop: '4px', fontWeight: 700 }}>MODERN PRICE GENERATED: ₹{results.premium.weekly_premium}</div>}
+                 </div>
+              </div>
+
+              {/* STAGE 2 */}
+              <div style={{ 
+                display: 'flex', gap: '24px', alignItems: 'center', padding: '24px', borderRadius: '16px', 
+                border: '1px solid', borderColor: step === 2 ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+                background: step === 2 ? 'rgba(0, 229, 255, 0.05)' : step > 2 ? 'rgba(0, 255, 148, 0.03)' : 'transparent',
+                opacity: step >= 2 ? 1 : 0.3
+              }}>
+                 <div className="brand-icon" style={{ width: '48px', height: '48px', background: step >= 2 ? 'linear-gradient(135deg, var(--primary), var(--accent))' : '#111' }}>
+                    <CloudRain size={20} color="white" />
+                 </div>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>STAGE 02</div>
+                    <div style={{ fontWeight: 700 }}>PARAMETRIC DISRUPTION DETECTION</div>
+                    {step === 2 && <div style={{ fontSize: '12px', color: 'var(--primary)', marginTop: '4px' }}>Awaiting IoT trigger signature...</div>}
+                    {step > 2 && results && <div style={{ fontSize: '14px', color: 'var(--success)', marginTop: '4px', fontWeight: 700 }}>TRIGGER CONFIRMED: {results.trigger.label}</div>}
+                 </div>
+              </div>
+
+              {/* STAGE 3 */}
+              <div style={{ 
+                display: 'flex', gap: '24px', alignItems: 'center', padding: '24px', borderRadius: '16px', 
+                border: '1px solid', borderColor: step === 3 ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+                background: step === 3 ? 'rgba(0, 229, 255, 0.05)' : step > 3 ? 'rgba(0, 255, 148, 0.03)' : 'transparent',
+                opacity: step >= 3 ? 1 : 0.3
+              }}>
+                 <div className="brand-icon" style={{ width: '48px', height: '48px', background: step >= 3 ? 'linear-gradient(135deg, var(--primary), var(--accent))' : '#111' }}>
+                    <Smartphone size={20} color="white" />
+                 </div>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>STAGE 03</div>
+                    <div style={{ fontWeight: 700 }}>MOBILE HANDSHAKE & SUBMISSION</div>
+                    {step === 3 && <div className="pulse-indicator" style={{ display: 'inline-block', marginRight: '8px' }} />}
+                    {step === 3 && <span style={{ fontSize: '12px', color: 'var(--primary)' }}>Intercepting worker app payload...</span>}
+                    {step > 3 && <div style={{ fontSize: '14px', color: 'var(--success)', marginTop: '4px', fontWeight: 700 }}>CLAIM TRANSMITTED TO SENTINEL</div>}
+                 </div>
+              </div>
+
+              {/* STAGE 4 */}
+              <div style={{ 
+                display: 'flex', gap: '24px', alignItems: 'center', padding: '24px', borderRadius: '16px', 
+                border: '1px solid', borderColor: step === 4 ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+                background: step === 4 ? (results?.claim.action === 'rejected' ? 'rgba(255, 0, 85, 0.05)' : 'rgba(0, 255, 148, 0.05)') : 'transparent',
+                opacity: step >= 4 ? 1 : 0.3
+              }}>
+                 <div className="brand-icon" style={{ width: '48px', height: '48px', background: step >= 4 ? (results?.claim.action === 'rejected' ? 'var(--danger)' : 'var(--success)') : '#111' }}>
+                    <ShieldCheck size={20} color="white" />
+                 </div>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>STAGE 04</div>
+                    <div style={{ fontWeight: 700 }}>ADVERSARIAL AI VERDICT</div>
+                    {step === 4 && results && (
+                      <div style={{ marginTop: '8px' }}>
+                         <div style={{ fontSize: '16px', fontWeight: 800, color: results.claim.action === 'rejected' ? 'var(--danger)' : 'var(--success)' }}>
+                            {results.claim.action_label.toUpperCase()}
+                         </div>
+                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>CONFIDENCE SCORE: {results.claim.confidence_score}%</div>
+                      </div>
+                    )}
+                 </div>
+              </div>
+
+           </div>
+        </div>
+
+        {/* Right: Signal Intel */}
+        <div className="glass-card" style={{ padding: '24px' }}>
+            <h3 className="brand-font" style={{ marginBottom: '24px', fontSize: '16px', color: 'var(--primary)' }}>INTELLIGENCE DECOMPOSITION</h3>
+            {results ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                 {Object.entries(results.claim.validation_signals).map(([key, signal]) => (
+                   <div key={key} style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)' }}>
+                      <div className="flex-between" style={{ marginBottom: '8px' }}>
+                         <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.5px' }}>{key}</span>
+                         <span style={{ fontSize: '10px', color: signal.passed ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>{signal.passed ? '✓ CLEAR' : '✗ ANOMALY'}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{signal.detail}</div>
+                   </div>
+                 ))}
+                 
+                 <div style={{ marginTop: '24px', padding: '16px', borderRadius: '12px', background: 'var(--bg-obsidian)', border: '1px dashed var(--border-glass)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>SYSTEM REASONING</div>
+                    <p style={{ fontSize: '13px', fontStyle: 'italic', lineHeight: 1.5 }}>
+                       "{results.claim.rejection_reason || results.claim.review_reason || 'Patterns match expected worker behavior profiles. Payout authorized.'}"
+                    </p>
+                 </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '100px 20px', color: 'var(--text-muted)' }}>
+                 <Fingerprint size={48} style={{ opacity: 0.1, marginBottom: '24px' }} />
+                 <p style={{ fontSize: '12px', lineHeight: 1.6 }}>Execute simulation sequence to engage signal intelligence decomposition.</p>
+              </div>
+            )}
+        </div>
+
+      </div>
     </div>
   );
 };
-
 export default SimulationSuite;

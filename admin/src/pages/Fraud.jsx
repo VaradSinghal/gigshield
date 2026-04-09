@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Crosshair, UserX, AlertOctagon, Check, X, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, Crosshair, UserX, AlertOctagon, Check, X, ShieldCheck, Eye, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { supabase } from '../supabase';
 
 const fraudTrends = [
   { name: 'Mon', spoofing: 12, velocity: 5, syndicate: 2 },
   { name: 'Tue', spoofing: 15, velocity: 8, syndicate: 3 },
-  { name: 'Wed', spoofing: 45, velocity: 22, syndicate: 12 }, // Storm day peak fraud
+  { name: 'Wed', spoofing: 45, velocity: 22, syndicate: 12 },
   { name: 'Thu', spoofing: 18, velocity: 9, syndicate: 4 },
   { name: 'Fri', spoofing: 14, velocity: 6, syndicate: 2 },
   { name: 'Sat', spoofing: 10, velocity: 4, syndicate: 1 },
@@ -36,8 +36,8 @@ const Fraud = () => {
           claimRef: f.claim_id,
           worker: f.worker_id,
           trustScore: f.confidence_score,
-          reason: f.trigger_data || 'Anomaly detected in parametric signature',
-          status: f.status === 'soft_review' ? 'Pending Review' : 'Flagged'
+          reason: f.trigger_label || 'Anomaly detected in parametric signature',
+          status: f.status === 'soft_review' ? 'PENDING' : 'FLAGGED'
         })));
 
         setStats({
@@ -50,135 +50,107 @@ const Fraud = () => {
     };
 
     fetchAnomalies();
-    const sub = supabase.channel('fraud-updates').on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, fetchAnomalies).subscribe();
+    const sub = supabase.channel('fraud-updates-sentinel').on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, fetchAnomalies).subscribe();
     return () => supabase.removeChannel(sub);
   }, []);
 
   return (
-    <div>
-      <div className="page-title">
-        Fraud & Adversarial Defense
+    <div className="fraud-sentinel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-1px' }}>ADVERSARIAL DEFENSE</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Real-time intercept of anomaly signatures and platform manipulation</p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255, 0, 85, 0.1)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--danger)' }}>
+          <div className="pulse-indicator" style={{ background: 'var(--danger)' }} />
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--danger)' }}>THREAT LEVEL: MODERATE</span>
+        </div>
       </div>
 
-      <div className="grid-cols-4">
-        <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--critical)' }}>
-          <div className="stat-header">
-            <span className="stat-title">GPS Spoofing Prevented</span>
-            <div className="stat-icon" style={{ background: 'var(--bg-card-light)', color: 'var(--critical)' }}>
-              <Crosshair size={20} />
-            </div>
-          </div>
+      <div className="grid-auto" style={{ padding: 0, marginBottom: '40px' }}>
+        <div className="glass-card stat-item" style={{ borderLeft: '4px solid var(--primary)' }}>
+          <span className="stat-label">GPS Intercepts</span>
           <div className="stat-value">{stats.spoofing}</div>
-          <div className="stat-trend trend-down">Attempts blocked</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Location signature mismatch</div>
         </div>
 
-        <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--danger)' }}>
-          <div className="stat-header">
-            <span className="stat-title">Syndicate Rings Detected</span>
-            <div className="stat-icon" style={{ background: 'rgba(198, 40, 40, 0.1)', color: 'var(--danger)' }}>
-              <UserX size={20} />
-            </div>
-          </div>
+        <div className="glass-card stat-item" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <span className="stat-label">Syndicate Detection</span>
           <div className="stat-value">{stats.syndicates}</div>
-          <div className="stat-trend trend-down">Behavior clusters</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Behavior cluster confirmed</div>
         </div>
 
-        <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--warning)' }}>
-          <div className="stat-header">
-            <span className="stat-title">Manual Reviews Pending</span>
-            <div className="stat-icon" style={{ background: 'rgba(230, 81, 0, 0.1)', color: 'var(--warning)' }}>
-              <AlertOctagon size={20} />
-            </div>
-          </div>
+        <div className="glass-card stat-item" style={{ borderLeft: '4px solid var(--warning)' }}>
+          <span className="stat-label">Manual Reviews</span>
           <div className="stat-value">{stats.pending}</div>
-          <div className="stat-trend trend-up">Current backlog</div>
+          <div style={{ fontSize: '12px', color: 'var(--warning)' }}>Requires Sentinel approval</div>
         </div>
 
-        <div className="glass-card stat-card" style={{ borderTop: '3px solid var(--success)' }}>
-          <div className="stat-header">
-            <span className="stat-title">Fraud Savings</span>
-            <div className="stat-icon" style={{ background: 'var(--bg-surface)', color: 'var(--success)' }}>
-              <ShieldAlert size={20} />
-            </div>
-          </div>
+        <div className="glass-card stat-item" style={{ borderLeft: '4px solid var(--success)' }}>
+          <span className="stat-label">Prevented Leakage</span>
           <div className="stat-value">₹{(stats.savings / 1000).toFixed(1)}k</div>
-          <div className="stat-trend trend-up">Prevented leakage</div>
+          <div style={{ fontSize: '12px', color: 'var(--success)' }}>AI auto-shield results</div>
         </div>
       </div>
 
-      <div className="grid-cols-2">
-        <div className="glass-card">
-          <div className="card-title">Attack Vectors (7 Days)</div>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={fraudTrends} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  cursor={{ fill: 'var(--bg-surface)' }}
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }}
-                />
-                <Legend />
-                <Bar dataKey="spoofing" name="GPS Spoofing" stackId="a" fill="var(--warning)" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="velocity" name="Claim Velocity" stackId="a" fill="var(--danger)" />
-                <Bar dataKey="syndicate" name="Syndicate Rings" stackId="a" fill="var(--critical)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      <div className="grid-cols-2" style={{ gap: '40px' }}>
+        <div className="glass-card" style={{ padding: '32px' }}>
+           <h3 className="brand-font" style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Activity size={20} color="var(--primary)" /> ATTACK VECTORS (7D ANALYSIS)
+           </h3>
+           <div style={{ height: '350px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={fraudTrends}>
+                  <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-glass)" vertical={false} />
+                  <Tooltip 
+                     contentStyle={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border-glass)', borderRadius: '12px' }}
+                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="spoofing" name="GPS SPOOF" stackId="a" fill="var(--primary)" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="velocity" name="CLAIM VELOCITY" stackId="a" fill="var(--accent)" />
+                  <Bar dataKey="syndicate" name="SYNDICATE" stackId="a" fill="var(--danger)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+           </div>
         </div>
 
-        <div className="glass-card">
-          <div className="card-title">Priority Manual Reviews</div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {flags.map(flag => (
-              <div key={flag.id} style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-                <div className="flex-between" style={{ marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ color: 'var(--danger)', fontWeight: 600 }}>{flag.id}</span>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Ref: {flag.claimRef}</span>
-                  </div>
-                  <span className="status-chip status-warning">{flag.status}</span>
+        <div className="glass-card" style={{ padding: '32px' }}>
+           <h3 className="brand-font" style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Eye size={20} color="var(--primary)" /> PRIORITY INTERCEPTS
+           </h3>
+           
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {flags.map((flag, i) => (
+                <div key={i} style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--danger)' }}>{flag.id}</span>
+                      <span className={`badge-neon ${flag.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}`}>{flag.status}</span>
+                   </div>
+                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                      <strong>Detection:</strong> {flag.reason}
+                   </div>
+                   <div style={{ display: 'flex', gap: '12px' }}>
+                      <button style={{ flex: 1, padding: '8px', background: 'transparent', border: '1px solid var(--success)', borderRadius: '8px', color: 'var(--success)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>APPROVE</button>
+                      <button style={{ flex: 1, padding: '8px', background: 'transparent', border: '1px solid var(--danger)', borderRadius: '8px', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>REJECT</button>
+                   </div>
                 </div>
-                
-                <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Worker</div>
-                    <div style={{ fontWeight: 500, fontSize: '14px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{flag.worker}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Trust Score</div>
-                    <div style={{ fontWeight: 500, fontSize: '14px', color: flag.trustScore < 30 ? 'var(--critical)' : 'var(--warning)' }}>{flag.trustScore}/100</div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>AI Confidence Flag</div>
-                    <div style={{ fontWeight: 500, fontSize: '14px' }}>{flag.reason}</div>
-                  </div>
+              ))}
+              {flags.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+                  <ShieldCheck size={32} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                  <div>SYSTEM STATE: CLEAN</div>
                 </div>
-                
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button style={{ flex: 1, padding: '8px', background: 'var(--bg-dark)', border: '1px solid var(--border-subtle)', borderRadius: '6px', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}>
-                    <Check size={16} /> Approve Claim
-                  </button>
-                  <button style={{ flex: 1, padding: '8px', background: 'rgba(255, 107, 107, 0.1)', border: '1px solid rgba(255, 107, 107, 0.3)', borderRadius: '6px', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}>
-                    <X size={16} /> Reject & Ban
-                  </button>
-                </div>
-              </div>
-            ))}
-            {flags.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                <Check size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                <div style={{ fontSize: '13px' }}>All clear. No pending fraud reviews.</div>
-              </div>
-            )}
-          </div>
+              )}
+           </div>
         </div>
       </div>
     </div>
   );
 };
+
 
 export default Fraud;
 

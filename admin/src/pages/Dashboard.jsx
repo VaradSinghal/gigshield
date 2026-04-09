@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, TrendingUp, AlertTriangle, Users, Activity, Banknote } from 'lucide-react';
+import { Shield, TrendingUp, AlertTriangle, Users, Activity, Banknote, Zap, Globe, ShieldCheck } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { supabase } from '../supabase';
 import { GigKavachApi } from '../api';
 import SimulationPanel from '../components/SimulationPanel';
-
-// ... (revenueData and flagsData unchanged)
 
 const Dashboard = () => {
   const [showSim, setShowSim] = useState(false);
@@ -16,22 +14,31 @@ const Dashboard = () => {
     claimsProcessing: 0,
     fraudFlags: 0,
     lossRatio: 0,
-    revenueData: [],
     flagsData: []
   });
 
+  const revenueData = [
+    { day: 'Mon', historical: 400, predicted: 440 },
+    { day: 'Tue', historical: 300, predicted: 320 },
+    { day: 'Wed', historical: 200, predicted: 250 },
+    { day: 'Thu', historical: 278, predicted: 300 },
+    { day: 'Fri', historical: 189, predicted: 210 },
+    { day: 'Sat', historical: 239, predicted: 260 },
+    { day: 'Sun', historical: 349, predicted: 390 },
+  ];
+
   useEffect(() => {
     const fetchData = async () => {
-      // 1. Fetch Real-time AI Analytics from Backend
       try {
         const [apiStats, apiPreds] = await Promise.all([
-          GigKavachApi.getStats(),
-          GigKavachApi.getPredictions()
+          GigKavachApi.getStats().catch(() => ({})),
+          GigKavachApi.getPredictions().catch(() => ({ data: [] }))
         ]);
         
-        setPredictions(apiPreds.data);
+        if (apiPreds && apiPreds.data) {
+          setPredictions(apiPreds.data);
+        }
         
-        // 2. Supplement with Supabase real-time data for detailed lists
         const { data: claimsData } = await supabase
           .from('claims')
           .select('claim_id, worker_id, payout_amount, confidence_score, status, trigger_label')
@@ -40,14 +47,12 @@ const Dashboard = () => {
 
         const fraudFlags = (claimsData || []).filter(c => c.confidence_score < 50);
 
-        setStats(prev => ({
-          ...prev,
-          activePolicies: apiStats.active_policies || 0,
-          premiumPool: apiStats.premium_pool || 0,
-          totalPayouts: apiStats.total_payouts || 0,
+        setStats({
+          activePolicies: apiStats?.active_policies || 0,
+          premiumPool: apiStats?.premium_pool || 0,
           claimsProcessing: claimsData?.length || 0,
           fraudFlags: fraudFlags.length,
-          lossRatio: apiStats.loss_ratio || 0,
+          lossRatio: apiStats?.loss_ratio || 0,
           flagsData: fraudFlags.slice(0, 4).map(f => ({
             id: f.claim_id,
             worker: f.worker_id,
@@ -55,27 +60,10 @@ const Dashboard = () => {
             status: f.confidence_score < 20 ? 'Critical' : 'Review',
             score: f.confidence_score
           }))
-        }));
+        });
       } catch (err) {
         console.error("Dashboard Sync Error:", err);
       }
-    };
-
-      setStats(prev => ({
-        ...prev,
-        activePolicies: policyCount || 0,
-        premiumPool: totalPool,
-        claimsProcessing: claimsCount || 0,
-        fraudFlags: fraudFlags.length,
-        lossRatio: lossRatio,
-        flagsData: fraudFlags.slice(0, 4).map(f => ({
-          id: f.claim_id,
-          worker: f.worker_id,
-          type: f.trigger_label || 'Anomaly',
-          status: f.status === 'soft_review' ? 'Review' : 'High Risk',
-          score: f.confidence_score
-        }))
-      }));
     };
 
     fetchData();

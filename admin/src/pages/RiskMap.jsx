@@ -2,7 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
-import { Layers, CloudRain, Wind, Sun, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Layers, CloudRain, Wind, Sun, AlertTriangle, RefreshCw, Activity, Terminal } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '../supabase';
 
@@ -13,7 +13,6 @@ const DEFAULT_HOTSPOTS = [
   { lat: 13.09, lng: 80.28, intensity: 0.4, count: 80, radius: 0.03, name: 'North Chennai', trigger: 'Baseline Risk' },
 ];
 
-// Helper to generate a normal distribution curve
 const gaussianRandom = () => {
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
@@ -21,33 +20,28 @@ const gaussianRandom = () => {
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 };
 
-// Custom component to wire leaflet.heat into react-leaflet
 const HeatmapLayer = ({ points }) => {
   const map = useMap();
 
   useEffect(() => {
     if (!map) return;
 
-    // Mapbox/Google Maps aesthetic colors
     const heatOptions = {
       radius: 25,
       blur: 35,
       maxZoom: 14,
       max: 1.0,
       gradient: {
-        0.2: '#00b894', // Safe Green
-        0.4: '#00cec9', // Cyan
-        0.6: '#fdaa49', // Warning Orange
-        0.8: '#ff6b6b', // Danger Red
-        1.0: '#e84393'  // Critical Pink
+        0.2: '#00E5FF', // Neon Cyan
+        0.4: '#7000FF', // Neon Violet
+        0.6: '#FFB302', // Neon Warning
+        0.8: '#FF0055', // Neon Danger
+        1.0: '#FF00FF'  // Critical
       }
     };
 
     const heatLayer = L.heatLayer(points, heatOptions).addTo(map);
-
-    return () => {
-      map.removeLayer(heatLayer);
-    };
+    return () => { map.removeLayer(heatLayer); };
   }, [map, points]);
 
   return null;
@@ -61,7 +55,7 @@ const RiskMap = () => {
       const { data } = await supabase.from('active_triggers').select('*').eq('status', 'active');
       if (data && data.length > 0) {
         const mapped = data.map(t => ({
-          lat: CHENNAI_CENTER[0] + (Math.random() - 0.5) * 0.1, // Simulated spread near center for demo if coords not in table
+          lat: CHENNAI_CENTER[0] + (Math.random() - 0.5) * 0.1,
           lng: CHENNAI_CENTER[1] + (Math.random() - 0.5) * 0.1,
           intensity: t.risk_level / 10,
           count: Math.floor(t.risk_level * 100),
@@ -76,14 +70,13 @@ const RiskMap = () => {
     };
 
     fetchTriggers();
-    const triggerSub = supabase.channel('risk-map').on('postgres_changes', { event: '*', schema: 'public', table: 'active_triggers' }, fetchTriggers).subscribe();
+    const triggerSub = supabase.channel('risk-map-sentinel').on('postgres_changes', { event: '*', schema: 'public', table: 'active_triggers' }, fetchTriggers).subscribe();
     return () => supabase.removeChannel(triggerSub);
   }, []);
 
   const heatPoints = useMemo(() => {
     const points = [];
     activeHotspots.forEach(hs => {
-      // Logic for heatmap points generation...
       const count = hs.count || 100;
       for (let i = 0; i < count; i++) {
         const latOffset = gaussianRandom() * (hs.radius || 0.04) * 0.5;
@@ -105,89 +98,73 @@ const RiskMap = () => {
   }, [activeHotspots]);
 
   return (
-    <div>
-      <div className="page-title">
-        Live City Risk Map
-        <span className="status-chip status-success" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }}></span>
-          Live Sync Active
-        </span>
+    <div className="risk-sentinel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-1px' }}>TACTICAL RISK TERMINAL</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Multi-layer geospatial intelligence and disruption telemetry</p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(0, 229, 255, 0.1)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--primary)' }}>
+          <div className="pulse-indicator" />
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)' }}>LIVE GEOSPATIAL SYNC ACTIVE</span>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 180px)' }}>
+      <div style={{ display: 'flex', gap: '40px', height: 'calc(100vh - 220px)' }}>
         {/* Map Area */}
-        <div className="glass-card" style={{ flex: 1, padding: 0, overflow: 'hidden', position: 'relative', border: '1px solid var(--border-subtle)' }}>
+        <div className="glass-card neon-border" style={{ flex: 1, padding: 0, overflow: 'hidden', position: 'relative' }}>
           <MapContainer 
             center={CHENNAI_CENTER} 
             zoom={12} 
-            style={{ height: '100%', width: '100%', backgroundColor: 'var(--bg-dark)' }}
+            style={{ height: '100%', width: '100%', backgroundColor: '#05070a' }}
             zoomControl={false}
           >
-            {/* Ultra-dark voyager map tiles for maximum contrast with heatmap */}
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; CARTO'
             />
-            {/* Render smoothly blended Heatmap Layer */}
             <HeatmapLayer points={heatPoints} />
-            
-            {/* Drop city labels back on top so they aren't obscured by the heat layer */}
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
-            />
           </MapContainer>
           
-          {/* Map Controls */}
           <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 1000 }}>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
-              <Layers size={20} />
-            </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
-              <CloudRain size={20} />
-            </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
-              <Wind size={20} />
-            </button>
-            <button style={{ width: '40px', height: '40px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-soft)' }}>
-              <Sun size={20} />
-            </button>
+             {[Layers, CloudRain, Wind, Sun].map((Icon, idx) => (
+               <button key={idx} style={{ width: '42px', height: '42px', background: 'rgba(13, 17, 23, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '10px', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+                  <Icon size={18} />
+               </button>
+             ))}
           </div>
         </div>
 
         {/* Sidebar Data */}
-        <div style={{ width: '380px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
-          <div className="glass-card">
-            <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <AlertTriangle size={20} color="var(--warning)" /> Priority Disruption Alerts
-            </div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Continuous risk density monitoring detecting active triggers in major areas.
-            </p>
+        <div style={{ width: '420px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', paddingRight: '12px' }}>
+          <div className="glass-card" style={{ padding: '32px' }}>
+            <h3 className="brand-font" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+               <Terminal size={18} color="var(--primary)" /> SIGNAL INTELLIGENCE
+            </h3>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {activeHotspots.filter(h => h.trigger !== 'Baseline Risk').map((zone, idx) => {
-                const colors = ['#e84393', '#ff6b6b', '#fdaa49', '#00cec9'];
+                const colors = ['var(--primary)', 'var(--accent)', 'var(--warning)', 'var(--danger)'];
                 const riskLevel = Math.round((zone.intensity || 0) * 100);
                 
                 return (
-                  <div key={idx} style={{ padding: '16px', background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-subtle)', borderLeft: `4px solid ${colors[idx % colors.length]}` }}>
-                    <div className="flex-between" style={{ marginBottom: '12px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '15px' }}>{zone.name}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Risk Index: <span style={{ color: colors[idx % colors.length], fontWeight: '800', fontSize: '16px' }}>{riskLevel}</span></div>
+                  <div key={idx} style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border-glass)', borderLeft: `4px solid ${colors[idx % colors.length]}` }}>
+                    <div className="flex-between" style={{ marginBottom: '16px' }}>
+                      <span style={{ fontWeight: 800, fontSize: '15px' }}>{zone.name}</span>
+                      <span className="badge-neon" style={{ color: colors[idx % colors.length] }}>IDX: {riskLevel}</span>
                     </div>
                     
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)', padding: '4px 8px', borderRadius: '6px', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                        <AlertTriangle size={12} /> {zone.trigger}
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                       <Activity size={14} color="var(--text-muted)" />
+                       <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{zone.trigger.toUpperCase()} DISRUPTION ACTIVE</span>
                     </div>
                   </div>
                 );
               })}
               {activeHotspots.filter(h => h.trigger !== 'Baseline Risk').length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                  <Sun size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                  <div style={{ fontSize: '13px' }}>City conditions are stable. No active disruption triggers.</div>
+                <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
+                  <Sun size={32} style={{ marginBottom: '20px', opacity: 0.2 }} />
+                  <div style={{ fontSize: '12px', letterSpacing: '0.5px' }}>GEOSPATIAL CONDITIONS STABLE. NO ACTIVE INTERCEPTS.</div>
                 </div>
               )}
             </div>
@@ -197,5 +174,6 @@ const RiskMap = () => {
     </div>
   );
 };
+
 
 export default RiskMap;
