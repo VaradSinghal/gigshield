@@ -3,7 +3,7 @@
  * This client connects the React Admin panel to the FastAPI AI backend.
  */
 
-const API_BASE_URL = 'http://localhost:8000'; // Default to localhost for web preview
+const API_BASE_URL = 'http://192.168.1.12:8000';
 
 const handleResponse = async (response) => {
   if (!response.ok) {

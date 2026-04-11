@@ -193,12 +193,14 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {stats.flagsData.map((flag, i) => (
-                <tr key={i}>
-                  <td style={{ color: 'var(--primary)', fontWeight: 500 }}>{flag.id}</td>
-                  <td>{flag.worker}</td>
-                  <td>{flag.type}</td>
+                <tr key={i} className="hover-row">
+                  <td style={{ color: 'var(--primary)', fontWeight: 800 }}>{flag.id}</td>
+                  <td style={{ fontWeight: 500 }}>{flag.worker}</td>
                   <td>
-                    <span className={`status-chip ${flag.score < 20 ? 'status-danger' : 'status-warning'}`}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{flag.type}</span>
+                  </td>
+                  <td>
+                    <span className={`badge-neon ${flag.score < 20 ? 'status-danger' : 'status-warning'}`}>
                       {flag.score}/100
                     </span>
                   </td>
@@ -206,8 +208,11 @@ const Dashboard = () => {
               ))}
               {stats.flagsData.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                    No critical anomalies detected recently.
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '64px 20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', opacity: 0.3 }}>
+                      <ShieldCheck size={48} />
+                      <div style={{ fontSize: '13px', letterSpacing: '1px' }}>NO CRITICAL ANOMALIES DETECTED</div>
+                    </div>
                   </td>
                 </tr>
               )}

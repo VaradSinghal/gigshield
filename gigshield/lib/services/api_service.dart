@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 /// Connects the Flutter application to the FastAPI AI Backend.
 class GigKavachApiService {
   // Use the local IP of the machine running the backend (physical device requirement)
-  static const String baseUrl = 'http://192.168.1.10:8000';
+  static const String baseUrl = 'http://192.168.1.12:8000';
 
   /// Fetches a dynamic premium quote from the AI engine.
   static Future<Map<String, dynamic>> getPremiumQuote({

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CloudRain, Wind, AlertCircle, X, Zap } from 'lucide-react';
 import { supabase } from '../supabase';
+import { GigKavachApi } from '../api';
 
 const SimulationPanel = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
@@ -31,8 +32,15 @@ const SimulationPanel = ({ onClose }) => {
       console.error('Trigger Error:', error);
       setStatus(`Error: ${error.message}`);
     } else {
-      setStatus(`Success! ${label} active in ${zone}.`);
-      setTimeout(() => setStatus(null), 3000);
+      setStatus(`AI Engine: Evaluating signals in ${zone}...`);
+      try {
+        const engineRes = await GigKavachApi.runEngine(zone, 'Chennai');
+        setStatus(`Success! Detected ${engineRes.active_triggers} triggers and generated ${engineRes.claims_generated} AI claims.`);
+      } catch (apiErr) {
+        console.error('AI Engine Error:', apiErr);
+        setStatus(`Caution: Trigger set, but AI engine failed to process.`);
+      }
+      setTimeout(() => setStatus(null), 5000);
     }
     setLoading(false);
   };
