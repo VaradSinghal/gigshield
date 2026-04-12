@@ -89,8 +89,20 @@ CREATE TABLE IF NOT EXISTS zone_risks (
     UNIQUE(city, zone)
 );
 
+-- 6. Create Notifications Table (Real-time Broadcasts)
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    worker_id TEXT REFERENCES workers(worker_id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'unread',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Set Enable Realtime for Flutter and Admin App sync
 ALTER PUBLICATION supabase_realtime ADD TABLE claims;
 ALTER PUBLICATION supabase_realtime ADD TABLE active_triggers;
 ALTER PUBLICATION supabase_realtime ADD TABLE policies;
 ALTER PUBLICATION supabase_realtime ADD TABLE zone_risks;
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
