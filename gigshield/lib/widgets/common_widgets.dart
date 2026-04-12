@@ -20,20 +20,12 @@ class GlassCard extends StatelessWidget {
     final card = Container(
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: gradient,
         color: gradient == null ? AppColors.bgCard : null,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.textMuted.withValues(alpha: 0.15),
+          color: AppColors.borderLight,
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: child,
     );
@@ -72,7 +64,7 @@ class StatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.15),
+                  color: AppColors.bgCardLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 18, color: iconColor),
@@ -167,7 +159,8 @@ class StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

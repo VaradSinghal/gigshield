@@ -255,7 +255,7 @@ class _InsuranceScreenState extends State<InsuranceScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -266,7 +266,7 @@ class _InsuranceScreenState extends State<InsuranceScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -300,7 +300,7 @@ class _InsuranceScreenState extends State<InsuranceScreen>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

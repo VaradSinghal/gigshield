@@ -44,11 +44,7 @@ class WalletScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00CEC9), Color(0xFF00B894)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -59,7 +55,7 @@ class WalletScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -297,8 +293,7 @@ class WalletScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isCredit ? AppColors.success : AppColors.danger)
-                        .withValues(alpha: 0.15),
+                    color: isCredit ? AppColors.onboardSuccessBg : AppColors.onboardDangerBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(

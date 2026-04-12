@@ -2,82 +2,85 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Primary brand colors (Now using the Light Theme Blue)
-  static const primary = Color(0xFF1565C0);
-  static const primaryLight = Color(0xFF42A5F5);
-  static const primaryDark = Color(0xFF0D47A1);
+  // Primary brand colors (Coinbase System)
+  static const primary = Color(0xFF0052FF);
+  static const primaryLight = Color(0xFF578BFA);
+  static const primaryDark = Color(0xFF003AB8);
 
   // Accent
-  static const accent = Color(0xFF00CEC9);
-  static const accentLight = Color(0xFF55EFC4);
+  static const accent = Color(0xFF0052FF);
+  static const accentLight = Color(0xFFE3F2FD);
 
   // Status colors
-  static const success = Color(0xFF2E7D32);
+  static const success = Color(0xFF098551);
   static const warning = Color(0xFFE65100);
-  static const danger = Color(0xFFC62828);
+  static const danger = Color(0xFFCF2027);
 
-  // Background (Semantically changing these to Light Mode values!)
-  static const bgDark = Color(0xFFFBFBFB); // Perfectly matches splash SVG background
-  static const bgCard = Colors.white;      // Was dark card, now white
-  static const bgCardLight = Color(0xFFF0F7FF); 
-  static const bgSurface = Color(0xFFE3F2FD); 
+  // Background
+  static const bgDark = Color(0xFFFFFFFF); // Pure white body
+  static const bgCard = Color(0xFFFFFFFF);      // Pure white cards
+  static const bgCardLight = Color(0xFFEEF0F3); // Muted surface
+  static const bgSurface = Color(0xFFF9FAFB); 
 
   // Text
-  static const textPrimary = Color(0xFF1A237E); 
-  static const textSecondary = Color(0xFF37474F); 
-  static const textMuted = Color(0xFF90A4AE); 
+  static const textPrimary = Color(0xFF0A0B0D); // Near black
+  static const textSecondary = Color(0xFF5B616E); // Muted text
+  static const textMuted = Color(0xFF8A919E); 
 
-  // Gradients
+  // Borders
+  static const borderLight = Color(0xFFEEF0F3);
+
+  // Gradients (Flattened for Coinbase aesthetic)
   static const primaryGradient = LinearGradient(
-    colors: [primary, primaryLight],
+    colors: [primary, primary],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const successGradient = LinearGradient(
-    colors: [success, accentLight],
+    colors: [success, success],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const warningGradient = LinearGradient(
-    colors: [warning, Color(0xFFE17055)],
+    colors: [warning, warning],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const dangerGradient = LinearGradient(
-    colors: [danger, Color(0xFFE84393)],
+    colors: [danger, danger],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // ─── Onboarding Light Theme (White & Blue) ───────────────────────
-  static const onboardBg = Color(0xFFFBFBFB);
-  static const onboardCard = Colors.white;
-  static const onboardBluePrimary = Color(0xFF1565C0);
-  static const onboardBlueLight = Color(0xFF42A5F5);
-  static const onboardBlueSoft = Color(0xFFE3F2FD);
-  static const onboardBluePale = Color(0xFFF0F7FF);
-  static const onboardTextDark = Color(0xFF1A237E);
-  static const onboardTextBody = Color(0xFF37474F);
-  static const onboardTextMuted = Color(0xFF90A4AE);
-  static const onboardBorder = Color(0xFFE0E8F0);
-  static const onboardSuccess = Color(0xFF2E7D32);
+  // ─── Onboarding Sub-theme ───────────────────────
+  static const onboardBg = Color(0xFFFFFFFF);
+  static const onboardCard = Color(0xFFFFFFFF);
+  static const onboardBluePrimary = Color(0xFF0052FF);
+  static const onboardBlueLight = Color(0xFF578BFA);
+  static const onboardBlueSoft = Color(0xFFEEF0F3);
+  static const onboardBluePale = Color(0xFFF9FAFB);
+  static const onboardTextDark = Color(0xFF0A0B0D);
+  static const onboardTextBody = Color(0xFF5B616E);
+  static const onboardTextMuted = Color(0xFF8A919E);
+  static const onboardBorder = Color(0xFFEEF0F3);
+  static const onboardSuccess = Color(0xFF098551);
   static const onboardSuccessBg = Color(0xFFE8F5E9);
   static const onboardWarning = Color(0xFFE65100);
   static const onboardWarningBg = Color(0xFFFFF3E0);
-  static const onboardDanger = Color(0xFFC62828);
+  static const onboardDanger = Color(0xFFCF2027);
   static const onboardDangerBg = Color(0xFFFFEBEE);
 
   static const onboardGradient = LinearGradient(
-    colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+    colors: [primary, primary],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const onboardGradientSubtle = LinearGradient(
-    colors: [Color(0xFFE3F2FD), Color(0xFFF0F7FF)],
+    colors: [bgCardLight, bgCardLight],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -101,7 +104,10 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.bgCard,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.borderLight, width: 1),
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.bgDark,
@@ -112,6 +118,35 @@ class AppTheme {
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          minimumSize: const Size(double.infinity, 56), // Rigid 56px Standard
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(56), // Pill standard
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          minimumSize: const Size(88, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(56),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

@@ -44,7 +44,7 @@ class DashboardScreen extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(14),
           ),
           child: const Center(
@@ -190,12 +190,7 @@ class DashboardScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.2),
-                  AppColors.accent.withValues(alpha: 0.2),
-                ],
-              ),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),

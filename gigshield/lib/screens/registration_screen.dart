@@ -277,7 +277,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.onboardBluePrimary,
             disabledBackgroundColor: AppColors.onboardBorder,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 0,
           ),
           child: _isRegistering

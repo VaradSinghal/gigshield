@@ -72,7 +72,7 @@ class ClaimDetailScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: AppColors.successGradient,
+                    color: AppColors.success,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -97,7 +97,7 @@ class ClaimDetailScreen extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(

@@ -247,7 +247,7 @@ class BoostScreen extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.15),
+                    color: AppColors.onboardSuccessBg,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
