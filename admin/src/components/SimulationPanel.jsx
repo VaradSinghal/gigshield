@@ -46,10 +46,10 @@ const SimulationPanel = ({ onClose }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, width: '400px', height: '100vh', background: 'var(--bg-card)', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 2000, padding: '32px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-subtle)' }}>
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '400px', height: '100vh', background: 'var(--bg-light)', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 2000, padding: '32px', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-light)' }}>
       <div className="flex-between" style={{ marginBottom: '32px' }}>
-        <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-primary)' }}>Incident Simulator</h2>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+        <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-dark)' }}>Incident Simulator</h2>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted-light)', cursor: 'pointer' }}><X size={24} /></button>
       </div>
 
       <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
@@ -60,36 +60,36 @@ const SimulationPanel = ({ onClose }) => {
         <button 
           disabled={loading}
           onClick={() => triggerIncident('weather', 'Heavy Rainfall', 'Velachery', 8.5)}
-          style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-light)', background: 'var(--surface-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
         >
-          <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(52, 152, 219, 0.1)', color: '#3498db' }}><CloudRain size={24} /></div>
+          <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--bg-light)', color: '#3498db', border: '1px solid var(--border-light)' }}><CloudRain size={24} /></div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Heavy Rainfall (Velachery)</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Trigger 8.5 Risk Score</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Heavy Rainfall (Velachery)</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted-light)' }}>Trigger 8.5 Risk Score</div>
           </div>
         </button>
 
         <button 
           disabled={loading}
           onClick={() => triggerIncident('aqi', 'Severe AQI Alert', 'T. Nagar', 7.2)}
-          style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-light)', background: 'var(--surface-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
         >
-          <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(155, 89, 182, 0.1)', color: '#9b59b6' }}><Wind size={24} /></div>
+          <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--bg-light)', color: '#9b59b6', border: '1px solid var(--border-light)' }}><Wind size={24} /></div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Severe AQI (T. Nagar)</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Trigger 7.2 Risk Score</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Severe AQI (T. Nagar)</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted-light)' }}>Trigger 7.2 Risk Score</div>
           </div>
         </button>
 
         <button 
           disabled={loading}
           onClick={() => triggerIncident('civic', 'Zone Lockdown', 'Adyar', 9.8)}
-          style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
+          style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-light)', background: 'var(--surface-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}
         >
-          <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c' }}><AlertCircle size={24} /></div>
+          <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--bg-light)', color: '#e74c3c', border: '1px solid var(--border-light)' }}><AlertCircle size={24} /></div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Zone Lockdown (Adyar)</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Trigger 9.8 Risk Score</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Zone Lockdown (Adyar)</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted-light)' }}>Trigger 9.8 Risk Score</div>
           </div>
         </button>
       </div>
@@ -106,7 +106,7 @@ const SimulationPanel = ({ onClose }) => {
             const { error } = await supabase.from('active_triggers').delete().neq('zone', 'Baseline');
             if (!error) setStatus('All active triggers cleared.');
           }}
-          style={{ width: '100%', padding: '12px', marginTop: '16px', background: 'none', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+          style={{ width: '100%', padding: '12px', marginTop: '16px', background: 'var(--bg-light)', border: '1px solid var(--border-light)', color: 'var(--text-muted-light)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
         >
           Clear All Active Triggers
         </button>

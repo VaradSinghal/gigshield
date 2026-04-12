@@ -22,7 +22,7 @@ const SentinelLayout = ({ children }) => {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">
-              <Shield size={22} color="white" />
+              <Shield size={20} color="white" />
             </div>
             <span>SENTINEL</span>
           </div>
@@ -45,7 +45,7 @@ const SentinelLayout = ({ children }) => {
             <Cpu size={20} /> Simulation
           </NavLink>
 
-          <div style={{ margin: '32px 0 16px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px', fontWeight: 700, padding: '0 16px' }}>Operations</div>
+          <div style={{ margin: '32px 0 16px', fontSize: '12px', fontFamily: 'var(--font-sans)', color: 'var(--text-muted-dark)', fontWeight: 600, padding: '0 16px' }}>Operations</div>
 
           <NavLink to="/workers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Users size={20} /> Workers
@@ -55,7 +55,7 @@ const SentinelLayout = ({ children }) => {
           </a>
         </nav>
         
-        <div style={{ padding: '24px', borderTop: '1px solid var(--border-glass)', fontSize: '12px', color: 'var(--text-muted)' }}>
+        <div style={{ padding: '24px', borderTop: '1px solid var(--border-dark)', fontSize: '13px', fontFamily: 'var(--font-sans)', color: 'var(--text-muted-dark)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div className="pulse-indicator" />
             SYSTEM STABLE
@@ -71,15 +71,15 @@ const SentinelLayout = ({ children }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <button className="icon-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <button className="icon-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dark)', cursor: 'pointer' }}>
               <Bell size={20} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '24px', borderLeft: '1px solid var(--border-glass)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '24px', borderLeft: '1px solid var(--border-light)' }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600 }}>Sentinel Admin</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>OPERATIONS LEVEL 5</div>
+                <div style={{ fontSize: '14px', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>Sentinel Admin</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted-light)' }}>Administrator</div>
               </div>
-              <div className="brand-icon" style={{ width: '36px', height: '36px', borderRadius: '50%' }}>
+              <div className="brand-icon" style={{ width: '36px', height: '36px', borderRadius: '56px' }}>
                 SA
               </div>
             </div>
