@@ -73,25 +73,10 @@ class FraudValidator:
         # Map to action
         confidence = result['confidence']
         
-        # Override action if high-confidence spoofing or weather mismatch detected
-        if not weather_verify['passed']:
-            confidence = min(confidence, 10)
-            reason = weather_verify['detail']
-        elif not gps_verify['passed']:
-            confidence = min(confidence, 20)
-            reason = gps_verify['detail']
-        else:
-            reason = "ML validation patterns are consistent."
-
-        if confidence >= 80:
-            action = 'auto_approve'
-            action_label = 'Auto-Approved'
-        elif confidence >= 50:
-            action = 'soft_review'
-            action_label = 'Manual Review Required'
-        else:
-            action = 'reject'
-            action_label = f'Rejected: {reason}'
+        # Enforce True AI/ML Action Logic (No rule-based overrides)
+        action = result.get('action', 'soft_review')
+        reason = "Neural network anomaly threshold cleared." if action == 'auto_approve' else ("Manual review directed by ML confidence boundary." if action == 'soft_review' else "ML model detected high-confidence fraudulent signature.")
+        action_label = "Auto-Approved" if action == 'auto_approve' else ("Manual Review Required" if action == 'soft_review' else f"Rejected: {reason}")
 
         return {
             'confidence_score': int(confidence),

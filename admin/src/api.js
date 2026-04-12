@@ -20,6 +20,9 @@ export const GigKavachApi = {
   // Predictive Analytics
   getPredictions: () => fetch(`${API_BASE_URL}/api/v1/dashboard/predictions`).then(handleResponse),
   
+  // Workers
+  getWorkers: () => fetch(`${API_BASE_URL}/api/v1/workers`).then(handleResponse),
+  
   // Simulation Management
   getScenarios: () => fetch(`${API_BASE_URL}/api/v1/simulation/scenarios`).then(handleResponse),
   

@@ -43,20 +43,21 @@ class PremiumCalculator:
         # Try ML model first
         ml_premium = self._predict_with_model(worker, zone_risk_score)
 
+        # Fallback tracking
         if ml_premium is not None:
-            # Use ML prediction as base, apply tier multiplier
-            tier_multiplier = base_rate / 45  # normalize to standard tier
+            tier_multiplier = base_rate / 45 
             premium = ml_premium * tier_multiplier
+            zone_adj = 0.0
+            weather_adj = 0.0
+            claims_adj = 0.0
+            loyalty_disc = 0.0
         else:
-            # Fallback: rule-based calculation
             premium = self._rule_based_calculation(worker, zone_risk_score,
                                                     weather_forecast_risk, base_rate)
-
-        # Build breakdown
-        zone_adj = round(zone_risk_score / 100 * 20, 2)
-        weather_adj = round(weather_forecast_risk * 15, 2)
-        claims_adj = round(worker.get('claim_rate', 0) * 10, 2)
-        loyalty_disc = round(min(worker.get('experience_weeks', 0) / 16 * 5, 10), 2)
+            zone_adj = round(zone_risk_score / 100 * 20, 2)
+            weather_adj = round(weather_forecast_risk * 15, 2)
+            claims_adj = round(worker.get('claim_rate', 0) * 10, 2)
+            loyalty_disc = round(min(worker.get('experience_weeks', 0) / 16 * 5, 10), 2)
 
         premium = round(max(15, premium), 2)
         coverage_ceiling = round(worker.get('avg_weekly_income', 4200) * tier['coverage_pct'] / 100, 2)

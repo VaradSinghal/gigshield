@@ -14,7 +14,8 @@ import asyncio
 from insurance.services.parametric_engine import ParametricEngine
 from insurance.services.claim_processor import ClaimProcessor
 from insurance.services.premium_calculator import PremiumCalculator
-from worker_os.routes import dashboard, simulation
+from worker_os.routes import dashboard, simulation, workers
+from services.notification_engine import notifier
 from supabase_client import db
 
 app = FastAPI(title="GigKavach Mock External APIs")
@@ -35,6 +36,7 @@ app.add_middleware(
 
 app.include_router(dashboard.router)
 app.include_router(simulation.router)
+app.include_router(workers.router)
 
 # Keep singletons
 engine = ParametricEngine()
@@ -178,8 +180,9 @@ def run_parametric_engine(city: str = "Chennai", zone: str = "Adyar", limit: int
         impacted_workers = res.data or []
         
         for w in impacted_workers:
-            # For each worker and each trigger, process a claim
+            # Broadcast the risk alert to the worker before processing claim
             for act_trigger in active_triggers:
+                notifier.emit_risk_alert(w['worker_id'], zone, act_trigger['label'], act_trigger['severity'])
                 claim = processor.process_claim(act_trigger, w)
                 claims_generated.append(claim)
     

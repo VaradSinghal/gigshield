@@ -11,6 +11,7 @@ import random
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from ai.model_loader import loader
 from fraud.services.validator import FraudValidator
+from services.notification_engine import notifier
 
 
 class ClaimProcessor:
@@ -94,10 +95,14 @@ class ClaimProcessor:
             claim['review_required'] = False
             claim['rejection_reason'] = val_result.get('reason', 'Low confidence score.')
 
-        # Step 5: Instant Payout Simulation
+        # Step 5: Instant Payout Simulation & Notifications
         if claim['status'] == 'approved':
             self._simulate_instant_payout(worker, claim['payout_amount'])
             claim['status'] = 'paid'
+            notifier.emit_claim_status(claim['worker_id'], claim['claim_id'], 'PAID', claim['payout_amount'])
+        elif claim['status'] == 'rejected':
+            notifier.emit_claim_status(claim['worker_id'], claim['claim_id'], 'REJECTED', 0)
+
 
         # Step 6: Create timeline
         claim['timeline'] = self._generate_timeline(claim, timestamp)

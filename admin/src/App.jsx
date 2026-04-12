@@ -7,6 +7,7 @@ import Claims from './pages/Claims';
 import RiskMap from './pages/RiskMap';
 import Fraud from './pages/Fraud';
 import SimulationSuite from './pages/SimulationSuite';
+import Workers from './pages/Workers';
 
 const SentinelLayout = ({ children }) => {
   const location = useLocation();
@@ -46,9 +47,9 @@ const SentinelLayout = ({ children }) => {
 
           <div style={{ margin: '32px 0 16px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px', fontWeight: 700, padding: '0 16px' }}>Operations</div>
 
-          <a href="#" className="nav-item">
+          <NavLink to="/workers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Users size={20} /> Workers
-          </a>
+          </NavLink>
           <a href="#" className="nav-item">
             <Settings size={20} /> Settings
           </a>
@@ -104,6 +105,7 @@ function App() {
           <Route path="/risk" element={<RiskMap />} />
           <Route path="/fraud" element={<Fraud />} />
           <Route path="/simulation" element={<SimulationSuite />} />
+          <Route path="/workers" element={<Workers />} />
         </Routes>
       </SentinelLayout>
     </BrowserRouter>
